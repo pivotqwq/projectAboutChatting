@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天测试 - 快速开始</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .step {
+            background: #f5f5f5;
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .step h2 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        .important {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            border: 2px solid #ffc107;
+        }
+        .tip {
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        .btn-demo {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💬 聊天测试系统 - 快速开始</h1>
+        
+        <div class="step important">
+            <h2><span class="step-number">⚠️</span> 重要提示</h2>
+            <ul>
+                <li><strong>必须先连接ChatHub才能发送消息！</strong></li>
+                <li>登录后，点击顶部的 <button class="btn-demo">⚡ 立即连接</button> 按钮</li>
+                <li>等待状态变为 <strong style="color: #4caf50;">✅ 在线</strong></li>
+                <li>然后才能发送消息</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2><span class="step-number">1</span> 登录系统</h2>
+            <ol>
+                <li>输入<strong>手机号</strong>或<strong>邮箱</strong>（必须是已注册的账号）</li>
+                <li>输入<strong>密码</strong>（长度必须>6）</li>
+                <li>点击"登录"按钮</li>
+            </ol>
+            <div class="tip">
+                💡 默认地址：<br>
+                • UserManager: <code>http://47.99.79.0:9291</code><br>
+                • ChatService: <code>http://47.99.79.0:9293</code>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2><span class="step-number">2</span> 连接ChatHub</h2>
+            <ol>
+                <li>登录成功后，顶部状态显示 <strong style="color: #f44336;">⚠️ 离线</strong></li>
+                <li>点击顶部的 <button class="btn-demo">⚡ 立即连接</button> 按钮</li>
+                <li>等待几秒，状态变为 <strong style="color: #4caf50;">✅ 在线</strong></li>
+                <li>右下角调试日志会显示连接成功信息</li>
+            </ol>
+            <div class="tip">
+                ⚠️ 如果连接失败：<br>
+                • 检查ChatService地址是否正确<br>
+                • 查看服务器上的ChatService是否运行<br>
+                • 查看调试日志了解详细错误
+            </div>
+        </div>
+
+        <div class="step">
+            <h2><span class="step-number">3</span> 开始聊天</h2>
+            <ol>
+                <li>在左侧<strong>"联系人"</strong>区域，点击标题右侧的 <strong>+</strong> 按钮</li>
+                <li>在弹出的对话框输入对方的<strong>用户ID</strong></li>
+                <li>点击"开始聊天"</li>
+                <li>在底部输入框输入消息</li>
+                <li>按<strong>Enter</strong>或点击"发送"按钮</li>
+            </ol>
+            <div class="tip">
+                💡 支持<strong>离线消息</strong>！即使对方不在线也能发送，对方上线后会看到
+            </div>
+        </div>
+
+        <div class="step">
+            <h2><span class="step-number">4</span> 多用户测试</h2>
+            <p>打开多个浏览器标签页，用不同账号登录：</p>
+            <ol>
+                <li><strong>标签页A</strong>：登录用户A，连接ChatHub</li>
+                <li><strong>标签页B（无痕模式 Ctrl+Shift+N）</strong>：登录用户B，连接ChatHub</li>
+                <li>在A中给B发消息，B应该实时收到</li>
+                <li>在B中回复，A也能实时收到</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h2>🔧 调试日志使用</h2>
+            <ul>
+                <li><strong>显示日志</strong>：点击顶部 <code>📋 日志</code> 按钮</li>
+                <li><strong>隐藏日志</strong>：点击 <code>🔽 关闭</code> 按钮或日志面板右上角的 <code>×</code></li>
+                <li><strong>清空日志</strong>：点击日志面板的"清空"按钮</li>
+            </ul>
+            <div class="tip">
+                💡 调试日志显示所有操作的详细信息，遇到问题时非常有用！
+            </div>
+        </div>
+
+        <div class="step important">
+            <h2>❓ 常见问题</h2>
+            <dl>
+                <dt><strong>Q: 消息发不出去？</strong></dt>
+                <dd>A: 检查顶部状态是否为"✅ 在线"，如果是"离线"请点击"⚡ 立即连接"</dd>
+                <br>
+                <dt><strong>Q: 按钮都是灰色的，无法点击？</strong></dt>
+                <dd>A: 这是正常的！必须先连接ChatHub后才能使用。点击顶部"⚡ 立即连接"按钮</dd>
+                <br>
+                <dt><strong>Q: 显示401错误？</strong></dt>
+                <dd>A: 需要更新服务器上的ChatService。将 <code>ChatService/publish</code> 文件夹上传到服务器并重启</dd>
+                <br>
+                <dt><strong>Q: 显示500错误？</strong></dt>
+                <dd>A: 检查服务器上Redis和MongoDB是否运行，查看服务器日志：<code>tail -f /www/wwwroot/backend/chatService/chat_publish/app.log</code></dd>
+            </dl>
+        </div>
+
+        <div class="step">
+            <h2>📦 部署更新的ChatService</h2>
+            <p>如果遇到401或500错误，需要部署最新版本：</p>
+            <ol>
+                <li>打开FTP工具（WinSCP/FileZilla）</li>
+                <li>连接到服务器 <code>47.99.79.0</code></li>
+                <li>上传 <code>D:\ForumAndChatRoomProject\ChatService\publish\</code> 所有文件</li>
+                <li>上传到 <code>/www/wwwroot/backend/chatService/chat_publish/</code></li>
+                <li>SSH连接服务器，执行：
+                    <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto;">pkill -f ChatService.dll
+cd /www/wwwroot/backend/chatService/chat_publish
+nohup dotnet ChatService.dll > app.log 2>&1 &
+tail -f app.log</pre>
+                </li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+            <p style="font-size: 18px; color: #667eea;">🎉 <strong>准备好了吗？开始测试吧！</strong></p>
+            <p style="color: #999;">遇到问题请查看右下角的调试日志</p>
+        </div>
+    </div>
+</body>
+</html>
+

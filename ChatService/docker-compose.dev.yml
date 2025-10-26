@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # ChatService 开发环境
+  chatservice-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatservice-dev
+    ports:
+      - "9391:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Mongo=mongodb://mongo:27017
+      - ConnectionStrings__Redis=redis:6379
+      - Mongo__Database=chatdb_dev
+      - Jwt__SecretKey=DevSecretKeyForJWTTokenGeneration123456
+      - Jwt__Issuer=ChatServiceAPI_Dev
+      - Jwt__Audience=ChatServiceClient_Dev
+    volumes:
+      - .:/src
+      - /src/bin
+      - /src/obj
+    depends_on:
+      - mongo-dev
+      - redis-dev
+    networks:
+      - chat-dev-network
+    restart: unless-stopped
+
+  # MongoDB 开发环境
+  mongo-dev:
+    image: mongo:7.0
+    container_name: chatservice-mongo-dev
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=chatdb_dev
+    volumes:
+      - mongo_dev_data:/data/db
+    networks:
+      - chat-dev-network
+    restart: unless-stopped
+
+  # Redis 开发环境
+  redis-dev:
+    image: redis:7.2-alpine
+    container_name: chatservice-redis-dev
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - chat-dev-network
+    restart: unless-stopped
+
+  # MongoDB Express 开发环境
+  mongo-express-dev:
+    image: mongo-express:1.0.0
+    container_name: chatservice-mongo-express-dev
+    ports:
+      - "8083:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo-dev
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=password123
+    depends_on:
+      - mongo-dev
+    networks:
+      - chat-dev-network
+    restart: unless-stopped
+
+  # Redis Commander 开发环境
+  redis-commander-dev:
+    image: rediscommander/redis-commander:latest
+    container_name: chatservice-redis-commander-dev
+    ports:
+      - "8084:8081"
+    environment:
+      - REDIS_HOSTS=local:redis-dev:6379:0
+    depends_on:
+      - redis-dev
+    networks:
+      - chat-dev-network
+    restart: unless-stopped
+
+volumes:
+  mongo_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  chat-dev-network:
+    driver: bridge

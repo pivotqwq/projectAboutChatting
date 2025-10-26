@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 - TeamUp</title>
+  <style>
+    /* ===== 原有样式保持不变 ===== */
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    body {
+      background-color: #000;
+      background: url('./images/bg.jpg') no-repeat center/cover #000;
+      position: relative;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .ball1 {
+      position: absolute;
+      width: 20%;
+      left: 22%;
+      top: 13%;
+    }
+
+    .ball2 {
+      position: absolute;
+      width: 65%;
+      left: 50%;
+      top: 22%;
+      transform: translateX(-50%);
+    }
+
+    .wx {
+      position: absolute;
+      width: 8%;
+      left: 64%;
+      top: 40%;
+    }
+
+    @keyframes ballanimation {
+      0% {
+        transform: translateY(0);
+      }
+
+      100% {
+        transform: translateY(-45px);
+      }
+    }
+
+    @keyframes wxanimation {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(45deg);
+      }
+    }
+
+    .ball1 {
+      animation: ballanimation 5s linear infinite alternate;
+    }
+
+    .ball2 {
+      animation: ballanimation 10s linear infinite alternate;
+    }
+
+    .wx {
+      animation: wxanimation 15s linear infinite alternate;
+    }
+
+    /* ===== 登录表单容器（右侧固定，暗色风格） ===== */
+    .login-container {
+      position: absolute;
+      right: 8%;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 100%;
+      max-width: 400px;
+      background: rgba(30, 30, 46, 0.85);
+      backdrop-filter: none;
+      border-radius: 16px;
+      padding: 40px 32px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      color: #f0f0f0;
+      z-index: 10;
+    }
+
+    .login-header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .login-header p {
+      color: #bbb;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #ddd;
+    }
+
+    .input-group input {
+      width: 100%;
+      max-width: 340px;
+      padding: 14px 16px;
+      border: 1px solid #444;
+      border-radius: 8px;
+      font-size: 16px;
+      background: rgba(20, 20, 30, 0.7);
+      color: #fff;
+      transition: border 0.3s, background 0.3s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #2575fc;
+      background: rgba(25, 25, 35, 0.9);
+    }
+
+    .input-group input::placeholder {
+      color: #888;
+    }
+
+    .input-group .password-toggle {
+      position: absolute;
+      right: 40px;
+      top: 42px;
+      cursor: pointer;
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .captcha-wrapper {
+      display: flex;
+      gap: 12px;
+      max-width: 340px;
+    }
+
+    .captcha-wrapper input {
+      flex: 1;
+    }
+
+    .captcha-btn {
+      padding: 14px 12px;
+      background: rgba(60, 60, 80, 0.7);
+      border: 1px solid #555;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #ddd;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    .captcha-btn:hover:not(:disabled) {
+      background: rgba(80, 80, 100, 0.8);
+    }
+
+    .captcha-btn:disabled {
+      background: rgba(50, 50, 60, 0.6);
+      color: #777;
+      cursor: not-allowed;
+    }
+
+    .login-btn {
+      width: 100%;
+      max-width: 340px;
+      padding: 14px;
+      background: #ff2442;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: background 0.3s;
+    }
+
+    .login-btn:hover {
+      background: #e01a35;
+    }
+
+    .error {
+      color: #ff6b6b;
+      font-size: 14px;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .tips {
+      text-align: center;
+      margin-top: 24px;
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .tips a {
+      color: #4da6ff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .tips a:hover {
+      text-decoration: underline;
+    }
+
+    /* ===== 新增：注册和忘记密码表单样式 ===== */
+    .form-section {
+      display: block;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .back-link {
+      margin-top: 15px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 背景动画元素 -->
+  <img src="./images/ball1.png" alt="" class="ball1" />
+  <img src="./images/ball2.png" alt="" class="ball2" />
+  <img src="./images/wx.png" alt="" class="wx" />
+
+  <!-- 登录表单容器（右侧） -->
+  <div class="login-container">
+    <!-- 登录表单 -->
+    <div id="loginSection" class="form-section">
+      <div class="login-header">
+        <h1>欢迎回来</h1>
+        <p>使用手机号、QQ邮箱或用户ID登录 TeamUp</p>
+      </div>
+
+      <form id="loginForm">
+        <div class="input-group">
+          <label for="username">账号</label>
+          <input type="text" id="username" placeholder="手机号 / QQ邮箱 / 用户ID" autocomplete="username" />
+          <div class="error" id="usernameError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="password">密码</label>
+          <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password" />
+          <span class="password-toggle" id="togglePassword">👁️</span>
+          <div class="error" id="passwordError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="captcha">验证码</label>
+          <div class="captcha-wrapper">
+            <input type="text" id="captcha" placeholder="请输入验证码" maxlength="6" />
+            <button type="button" class="captcha-btn" id="getCaptcha">
+              获取验证码
+            </button>
+          </div>
+          <div class="error" id="captchaError"></div>
+        </div>
+
+        <button type="submit" class="login-btn">登录</button>
+      </form>
+
+      <div class="tips">
+        还没有账号？<a id="showRegisterLink">立即注册</a> | <a id="showForgotPasswordLink">忘记密码？</a>
+      </div>
+    </div>
+
+    <!-- 注册表单 -->
+    <div id="registerSection" class="form-section hidden">
+      <div class="login-header">
+        <h1>创建账户</h1>
+        <p>注册您的TeamUp账户</p>
+      </div>
+
+      <form id="registerForm">
+        <div class="input-group">
+          <label for="regUsername">用户名</label>
+          <input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="username" />
+          <div class="error" id="regUsernameError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="regEmail">电子邮箱</label>
+          <input type="email" id="regEmail" placeholder="请输入QQ邮箱" autocomplete="email" />
+          <div class="error" id="regEmailError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="regPassword">密码</label>
+          <input type="password" id="regPassword" placeholder="请输入密码（至少6位）" autocomplete="new-password" />
+          <span class="password-toggle" id="toggleRegPassword">👁️</span>
+          <div class="error" id="regPasswordError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="regConfirmPassword">确认密码</label>
+          <input type="password" id="regConfirmPassword" placeholder="请再次输入密码" autocomplete="new-password" />
+          <div class="error" id="regConfirmPasswordError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="regCaptcha">验证码</label>
+          <div class="captcha-wrapper">
+            <input type="text" id="regCaptcha" placeholder="请输入验证码" maxlength="6" />
+            <button type="button" class="captcha-btn" id="getRegCaptcha">
+              获取验证码
+            </button>
+          </div>
+          <div class="error" id="regCaptchaError"></div>
+        </div>
+
+        <button type="submit" class="login-btn">立即注册</button>
+      </form>
+
+      <div class="tips">
+        已有账号？<a id="backToLoginFromRegister">返回登录</a>
+      </div>
+    </div>
+
+    <!-- 忘记密码表单 -->
+    <div id="forgotPasswordSection" class="form-section hidden">
+      <div class="login-header">
+        <h1>重置密码</h1>
+        <p>输入您的注册邮箱以重置密码</p>
+      </div>
+
+      <form id="forgotPasswordForm">
+        <div class="input-group">
+          <label for="forgotEmail">注册邮箱</label>
+          <input type="email" id="forgotEmail" placeholder="请输入您的注册邮箱" autocomplete="email" />
+          <div class="error" id="forgotEmailError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="forgotCaptcha">验证码</label>
+          <div class="captcha-wrapper">
+            <input type="text" id="forgotCaptcha" placeholder="请输入验证码" maxlength="6" />
+            <button type="button" class="captcha-btn" id="getForgotCaptcha">
+              获取验证码
+            </button>
+          </div>
+          <div class="error" id="forgotCaptchaError"></div>
+        </div>
+
+        <button type="submit" class="login-btn">发送重置链接</button>
+      </form>
+
+      <div class="tips">
+        <a id="backToLoginFromForgot">返回登录</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 原有登录功能代码保持不变 =====
+    // DOM 元素
+    const form = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const captchaInput = document.getElementById('captcha');
+    const getCaptchaBtn = document.getElementById('getCaptcha');
+    const togglePassword = document.getElementById('togglePassword');
+
+    const usernameError = document.getElementById('usernameError');
+    const passwordError = document.getElementById('passwordError');
+    const captchaError = document.getElementById('captchaError');
+
+    // 切换密码可见性
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+
+    // 验证函数
+    function validateUsername(val) {
+      if (!val.trim()) return '请输入账号';
+      const phoneRegex = /^1[3-9]\d{9}$/;
+      const qqEmailRegex = /^[1-9]\d{4,10}@qq\.com$/;
+      const userIdRegex = /^[a-zA-Z0-9_]{3,20}$/;
+
+      if (phoneRegex.test(val) || qqEmailRegex.test(val) || userIdRegex.test(val)) {
+        return '';
+      }
+      return '请输入有效的手机号、QQ邮箱或用户ID';
+    }
+
+    function validatePassword(val) {
+      return val.trim() ? '' : '请输入密码';
+    }
+
+    function validateCaptcha(val) {
+      return val.trim() ? '' : '请输入验证码';
+    }
+
+    // 获取验证码（模拟）
+    let countdown = 60;
+    let timer = null;
+
+    getCaptchaBtn.addEventListener('click', () => {
+      const error = validateUsername(usernameInput.value);
+      if (error) {
+        showError(usernameError, error);
+        return;
+      }
+
+      getCaptchaBtn.disabled = true;
+      countdown = 60;
+
+      const tick = () => {
+        if (countdown > 0) {
+          getCaptchaBtn.textContent = `${countdown} 秒后重试`;
+          countdown--;
+          timer = setTimeout(tick, 1000);
+        } else {
+          getCaptchaBtn.disabled = false;
+          getCaptchaBtn.textContent = '获取验证码';
+          clearTimeout(timer);
+        }
+      };
+
+      tick();
+      alert(`验证码已发送至 ${usernameInput.value}（模拟）`);
+    });
+
+    function showError(element, message) {
+      element.textContent = message;
+      element.style.display = 'block';
+    }
+
+    function hideError(element) {
+      element.style.display = 'none';
+    }
+
+    // 表单提交 - 修改点：验证通过后跳转到index.html
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      hideError(usernameError);
+      hideError(passwordError);
+      hideError(captchaError);
+
+      const uErr = validateUsername(usernameInput.value);
+      const pErr = validatePassword(passwordInput.value);
+      const cErr = validateCaptcha(captchaInput.value);
+
+      if (uErr) showError(usernameError, uErr);
+      if (pErr) showError(passwordError, pErr);
+      if (cErr) showError(captchaError, cErr);
+
+      if (!uErr && !pErr && !cErr) {
+        // 验证通过，跳转到index.html
+        window.location.href = 'index.html';
+      }
+    });
+
+    // 实时清除错误
+    usernameInput.addEventListener('input', () => hideError(usernameError));
+    passwordInput.addEventListener('input', () => hideError(passwordError));
+    captchaInput.addEventListener('input', () => hideError(captchaError));
+
+    // ===== 新增：注册和忘记密码功能 =====
+    // 表单切换元素
+    const loginSection = document.getElementById('loginSection');
+    const registerSection = document.getElementById('registerSection');
+    const forgotPasswordSection = document.getElementById('forgotPasswordSection');
+
+    const showRegisterLink = document.getElementById('showRegisterLink');
+    const showForgotPasswordLink = document.getElementById('showForgotPasswordLink');
+    const backToLoginFromRegister = document.getElementById('backToLoginFromRegister');
+    const backToLoginFromForgot = document.getElementById('backToLoginFromForgot');
+
+    // 注册表单元素
+    const registerForm = document.getElementById('registerForm');
+    const regUsernameInput = document.getElementById('regUsername');
+    const regEmailInput = document.getElementById('regEmail');
+    const regPasswordInput = document.getElementById('regPassword');
+    const regConfirmPasswordInput = document.getElementById('regConfirmPassword');
+    const regCaptchaInput = document.getElementById('regCaptcha');
+    const getRegCaptchaBtn = document.getElementById('getRegCaptcha');
+    const toggleRegPassword = document.getElementById('toggleRegPassword');
+
+    const regUsernameError = document.getElementById('regUsernameError');
+    const regEmailError = document.getElementById('regEmailError');
+    const regPasswordError = document.getElementById('regPasswordError');
+    const regConfirmPasswordError = document.getElementById('regConfirmPasswordError');
+    const regCaptchaError = document.getElementById('regCaptchaError');
+
+    // 忘记密码表单元素
+    const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+    const forgotEmailInput = document.getElementById('forgotEmail');
+    const forgotCaptchaInput = document.getElementById('forgotCaptcha');
+    const getForgotCaptchaBtn = document.getElementById('getForgotCaptcha');
+
+    const forgotEmailError = document.getElementById('forgotEmailError');
+    const forgotCaptchaError = document.getElementById('forgotCaptchaError');
+
+    // 表单切换功能
+    showRegisterLink.addEventListener('click', () => {
+      loginSection.classList.add('hidden');
+      registerSection.classList.remove('hidden');
+    });
+
+    showForgotPasswordLink.addEventListener('click', () => {
+      loginSection.classList.add('hidden');
+      forgotPasswordSection.classList.remove('hidden');
+    });
+
+    backToLoginFromRegister.addEventListener('click', () => {
+      registerSection.classList.add('hidden');
+      loginSection.classList.remove('hidden');
+    });
+
+    backToLoginFromForgot.addEventListener('click', () => {
+      forgotPasswordSection.classList.add('hidden');
+      loginSection.classList.remove('hidden');
+    });
+
+    // 注册表单密码可见性切换
+    toggleRegPassword.addEventListener('click', () => {
+      const type = regPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      regPasswordInput.setAttribute('type', type);
+      toggleRegPassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+
+    // 注册表单验证函数
+    function validateRegUsername(val) {
+      if (!val.trim()) return '请输入用户名';
+      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+      if (!usernameRegex.test(val)) return '用户名应为3-20位字母、数字或下划线';
+      return '';
+    }
+
+    function validateRegEmail(val) {
+      if (!val.trim()) return '请输入邮箱地址';
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(val)) return '请输入有效的邮箱地址';
+      return '';
+    }
+
+    function validateRegPassword(val) {
+      if (!val.trim()) return '请输入密码';
+      if (val.length < 6) return '密码长度至少6位';
+      return '';
+    }
+
+    function validateRegConfirmPassword(val, password) {
+      if (!val.trim()) return '请确认密码';
+      if (val !== password) return '两次输入的密码不一致';
+      return '';
+    }
+
+    // 忘记密码表单验证函数
+    function validateForgotEmail(val) {
+      if (!val.trim()) return '请输入注册邮箱';
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(val)) return '请输入有效的邮箱地址';
+      return '';
+    }
+
+    // 注册表单验证码获取
+    getRegCaptchaBtn.addEventListener('click', () => {
+      const emailError = validateRegEmail(regEmailInput.value);
+      if (emailError) {
+        showError(regEmailError, emailError);
+        return;
+      }
+
+      getRegCaptchaBtn.disabled = true;
+      let regCountdown = 60;
+
+      const tick = () => {
+        if (regCountdown > 0) {
+          getRegCaptchaBtn.textContent = `${regCountdown} 秒后重试`;
+          regCountdown--;
+          setTimeout(tick, 1000);
+        } else {
+          getRegCaptchaBtn.disabled = false;
+          getRegCaptchaBtn.textContent = '获取验证码';
+        }
+      };
+
+      tick();
+      alert(`验证码已发送至 ${regEmailInput.value}（模拟）`);
+    });
+
+    // 忘记密码表单验证码获取
+    getForgotCaptchaBtn.addEventListener('click', () => {
+      const emailError = validateForgotEmail(forgotEmailInput.value);
+      if (emailError) {
+        showError(forgotEmailError, emailError);
+        return;
+      }
+
+      getForgotCaptchaBtn.disabled = true;
+      let forgotCountdown = 60;
+
+      const tick = () => {
+        if (forgotCountdown > 0) {
+          getForgotCaptchaBtn.textContent = `${forgotCountdown} 秒后重试`;
+          forgotCountdown--;
+          setTimeout(tick, 1000);
+        } else {
+          getForgotCaptchaBtn.disabled = false;
+          getForgotCaptchaBtn.textContent = '获取验证码';
+        }
+      };
+
+      tick();
+      alert(`验证码已发送至 ${forgotEmailInput.value}（模拟）`);
+    });
+
+    // 注册表单提交 - 修改点：验证通过后跳转到index.html
+    registerForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      hideError(regUsernameError);
+      hideError(regEmailError);
+      hideError(regPasswordError);
+      hideError(regConfirmPasswordError);
+      hideError(regCaptchaError);
+
+      const usernameErr = validateRegUsername(regUsernameInput.value);
+      const emailErr = validateRegEmail(regEmailInput.value);
+      const passwordErr = validateRegPassword(regPasswordInput.value);
+      const confirmErr = validateRegConfirmPassword(regConfirmPasswordInput.value, regPasswordInput.value);
+      const captchaErr = validateCaptcha(regCaptchaInput.value);
+
+      if (usernameErr) showError(regUsernameError, usernameErr);
+      if (emailErr) showError(regEmailError, emailErr);
+      if (passwordErr) showError(regPasswordError, passwordErr);
+      if (confirmErr) showError(regConfirmPasswordError, confirmErr);
+      if (captchaErr) showError(regCaptchaError, captchaErr);
+
+      if (!usernameErr && !emailErr && !passwordErr && !confirmErr && !captchaErr) {
+        // 注册成功，跳转到index.html
+        window.location.href = 'index.html';
+      }
+    });
+
+    // 忘记密码表单提交
+    forgotPasswordForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      hideError(forgotEmailError);
+      hideError(forgotCaptchaError);
+
+      const emailErr = validateForgotEmail(forgotEmailInput.value);
+      const captchaErr = validateCaptcha(forgotCaptchaInput.value);
+
+      if (emailErr) showError(forgotEmailError, emailErr);
+      if (captchaErr) showError(forgotCaptchaError, captchaErr);
+
+      if (!emailErr && !captchaErr) {
+        alert(`密码重置链接已发送至 ${forgotEmailInput.value}，请查看您的邮箱（模拟）`);
+        forgotPasswordSection.classList.add('hidden');
+        loginSection.classList.remove('hidden');
+        forgotPasswordForm.reset();
+      }
+    });
+
+    // 实时清除错误提示
+    regUsernameInput.addEventListener('input', () => hideError(regUsernameError));
+    regEmailInput.addEventListener('input', () => hideError(regEmailError));
+    regPasswordInput.addEventListener('input', () => hideError(regPasswordError));
+    regConfirmPasswordInput.addEventListener('input', () => hideError(regConfirmPasswordError));
+    regCaptchaInput.addEventListener('input', () => hideError(regCaptchaError));
+    forgotEmailInput.addEventListener('input', () => hideError(forgotEmailError));
+    forgotCaptchaInput.addEventListener('input', () => hideError(forgotCaptchaError));
+  </script>
+</body>
+
+</html>
