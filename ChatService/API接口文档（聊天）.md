@@ -4,7 +4,7 @@
 
 ChatService 提供实时聊天功能 API，包括私聊、群聊、消息管理和在线状态等功能。
 
-**Base URL**: `http://localhost:9391`
+**Base URL**: `http://localhost:9293
 
 **认证方式**: JWT Bearer Token
 
@@ -17,7 +17,7 @@ ChatService 提供实时聊天功能 API，包括私聊、群聊、消息管理�
 ### 步骤 1: 在 UserManager 登录获取 Token
 
 ```bash
-# UserManager 服务地址: http://localhost:5050
+# UserManager 服务地址: http://localhost:9291
 POST http://localhost:5050/api/Login/LoginByPhoneAndPassword
 Content-Type: application/json
 
@@ -290,102 +290,6 @@ connection.on("ReceiveGroupMessage", (message) => {
 
 ---
 
-## 完整示例代码
-
-### JavaScript/TypeScript 客户端
-
-```typescript
-import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
-
-class ChatClient {
-  private connection: signalR.HubConnection;
-
-  constructor(token: string) {
-    this.connection = new HubConnectionBuilder()
-      .withUrl(`http://localhost:9391/hubs/chat?access_token=${token}`)
-      .configureLogging(LogLevel.Information)
-      .withAutomaticReconnect()
-      .build();
-
-    // 注册事件监听
-    this.registerEventHandlers();
-  }
-
-  private registerEventHandlers() {
-    // 接收私聊消息
-    this.connection.on("ReceivePrivateMessage", (message) => {
-      console.log("收到私聊消息:", message);
-    });
-
-    // 私聊消息发送确认
-    this.connection.on("PrivateMessageSent", (message) => {
-      console.log("消息已发送:", message);
-    });
-
-    // 接收群聊消息
-    this.connection.on("ReceiveGroupMessage", (message) => {
-      console.log("收到群聊消息:", message);
-    });
-  }
-
-  async connect() {
-    try {
-      await this.connection.start();
-      console.log("已连接到聊天服务");
-    } catch (err) {
-      console.error("连接失败:", err);
-    }
-  }
-
-  async sendPrivateMessage(toUserId: string, content: string) {
-    await this.connection.invoke("SendPrivateMessage", toUserId, content);
-  }
-
-  async sendGroupMessage(groupId: string, content: string) {
-    await this.connection.invoke("SendGroupMessage", groupId, content);
-  }
-
-  async joinGroup(groupId: string) {
-    await this.connection.invoke("JoinGroup", groupId);
-  }
-
-  async leaveGroup(groupId: string) {
-    await this.connection.invoke("LeaveGroup", groupId);
-  }
-
-  async disconnect() {
-    await this.connection.stop();
-  }
-}
-
-// 使用示例
-async function main() {
-  // 1. 先从 UserManager 获取 token
-  const loginResponse = await fetch('http://localhost:5050/api/Login/LoginByPhoneAndPassword', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      userBasic: { phoneNumber: "13800138000" },
-      password: "yourpassword"
-    })
-  });
-  const { accessToken } = await loginResponse.json();
-
-  // 2. 使用 token 连接 ChatService
-  const chatClient = new ChatClient(accessToken);
-  await chatClient.connect();
-
-  // 3. 发送私聊消息
-  await chatClient.sendPrivateMessage("targetUserId", "Hello!");
-
-  // 4. 加入群组并发送消息
-  await chatClient.joinGroup("group001");
-  await chatClient.sendGroupMessage("group001", "Hello everyone!");
-}
-```
-
----
-
 ### cURL 示例
 
 ```bash
@@ -504,7 +408,7 @@ ChatService 的 JWT 配置必须与 UserManager 保持一致：
 
 ## 技术支持
 
-- **Swagger UI**: http://localhost:9391/swagger
+- **Swagger UI**: http://localhost:9293/swagger
 - **MongoDB 数据库**: chatdb
 - **Redis**: 用于在线状态管理
 
