@@ -12,6 +12,7 @@ namespace ForumManager.Domain.Entities
         public Guid AuthorId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
+        public string? TitleImageBase64 { get; set; }
         public ValueObjects.PostCategory Category { get; set; }
         public ValueObjects.PostStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }

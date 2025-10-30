@@ -18,7 +18,7 @@ namespace ForumManager.Domain
         /// <summary>
         /// 创建帖子
         /// </summary>
-        public async Task<Post> CreatePostAsync(Guid authorId, string title, string content, ValueObjects.PostCategory category, List<string>? tags = null)
+        public async Task<Post> CreatePostAsync(Guid authorId, string title, string content, ValueObjects.PostCategory category, List<string>? tags = null, string? titleImageBase64 = null)
         {
             // 验证标题长度
             if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
@@ -33,13 +33,14 @@ namespace ForumManager.Domain
                 throw new ArgumentException("标签数量不能超过10个");
 
             var post = new Post(authorId, title.Trim(), content.Trim(), category, tags);
+            post.TitleImageBase64 = titleImageBase64;
             return await _forumRepository.CreatePostAsync(post);
         }
 
         /// <summary>
         /// 编辑帖子
         /// </summary>
-        public async Task<Post> EditPostAsync(Guid postId, Guid userId, string title, string content, List<string>? tags = null)
+        public async Task<Post> EditPostAsync(Guid postId, Guid userId, string title, string content, List<string>? tags = null, string? titleImageBase64 = null)
         {
             var post = await _forumRepository.GetPostByIdAsync(postId);
             if (post == null)
@@ -61,6 +62,10 @@ namespace ForumManager.Domain
                 throw new ArgumentException("标签数量不能超过10个");
 
             post.EditPost(title.Trim(), content.Trim(), tags);
+            if (titleImageBase64 != null)
+            {
+                post.TitleImageBase64 = titleImageBase64;
+            }
             return await _forumRepository.UpdatePostAsync(post);
         }
 

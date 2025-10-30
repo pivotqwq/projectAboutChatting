@@ -44,6 +44,7 @@ namespace ForumManager.WebAPI.Controllers
                 Id = p.Id,
                 Title = p.Title,
                 Content = p.Content,
+                TitleImageBase64 = p.TitleImageBase64,
                 Category = p.Category,
                 AuthorId = p.AuthorId,
                 CreatedAt = p.CreatedAt,
@@ -79,6 +80,7 @@ namespace ForumManager.WebAPI.Controllers
                 Id = p.Id,
                 Title = p.Title,
                 Content = p.Content,
+                TitleImageBase64 = p.TitleImageBase64,
                 Category = p.Category,
                 AuthorId = p.AuthorId,
                 CreatedAt = p.CreatedAt,
@@ -112,6 +114,7 @@ namespace ForumManager.WebAPI.Controllers
                 Id = post.Id,
                 Title = post.Title,
                 Content = post.Content,
+                TitleImageBase64 = post.TitleImageBase64,
                 Category = post.Category,
                 AuthorId = post.AuthorId,
                 CreatedAt = post.CreatedAt,
@@ -144,13 +147,14 @@ namespace ForumManager.WebAPI.Controllers
         public async Task<ActionResult<PostResponse>> CreatePost([FromBody] CreatePostRequest request)
         {
             var userId = GetCurrentUserId();
-            var post = await _forumDomainService.CreatePostAsync(userId, request.Title, request.Content, request.Category, request.Tags);
+            var post = await _forumDomainService.CreatePostAsync(userId, request.Title, request.Content, request.Category, request.Tags, request.TitleImageBase64);
 
             var response = new PostResponse
             {
                 Id = post.Id,
                 Title = post.Title,
                 Content = post.Content,
+                TitleImageBase64 = post.TitleImageBase64,
                 Category = post.Category,
                 AuthorId = post.AuthorId,
                 CreatedAt = post.CreatedAt,
@@ -173,13 +177,14 @@ namespace ForumManager.WebAPI.Controllers
         public async Task<ActionResult<PostResponse>> UpdatePost(Guid postId, [FromBody] UpdatePostRequest request)
         {
             var userId = GetCurrentUserId();
-            var post = await _forumDomainService.EditPostAsync(postId, userId, request.Title, request.Content, request.Tags);
+            var post = await _forumDomainService.EditPostAsync(postId, userId, request.Title, request.Content, request.Tags, request.TitleImageBase64);
 
             var response = new PostResponse
             {
                 Id = post.Id,
                 Title = post.Title,
                 Content = post.Content,
+                TitleImageBase64 = post.TitleImageBase64,
                 Category = post.Category,
                 AuthorId = post.AuthorId,
                 CreatedAt = post.CreatedAt,
@@ -249,6 +254,7 @@ namespace ForumManager.WebAPI.Controllers
                 Id = p.Id,
                 Title = p.Title,
                 Content = p.Content,
+                TitleImageBase64 = p.TitleImageBase64,
                 Category = p.Category,
                 AuthorId = p.AuthorId,
                 CreatedAt = p.CreatedAt,

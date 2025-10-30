@@ -10,6 +10,7 @@ namespace ForumManager.WebAPI.Models.Responses
         public Guid Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
+        public string? TitleImageBase64 { get; set; }
         public PostCategory Category { get; set; }
         public Guid AuthorId { get; set; }
         public DateTime CreatedAt { get; set; }

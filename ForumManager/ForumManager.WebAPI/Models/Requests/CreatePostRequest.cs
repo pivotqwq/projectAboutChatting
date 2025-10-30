@@ -23,6 +23,11 @@ namespace ForumManager.WebAPI.Models.Requests
         public string Content { get; set; } = string.Empty;
 
         /// <summary>
+        /// 帖子标题图片（Base64，可选）
+        /// </summary>
+        public string? TitleImageBase64 { get; set; }
+
+        /// <summary>
         /// 帖子分类
         /// </summary>
         [Required(ErrorMessage = "分类不能为空")]

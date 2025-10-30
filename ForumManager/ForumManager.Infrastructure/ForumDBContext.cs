@@ -29,6 +29,7 @@ namespace ForumManager.Infrastructure
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
                 entity.Property(e => e.Content).HasMaxLength(10000).IsRequired();
+                entity.Property(e => e.TitleImageBase64).HasColumnType("text").IsRequired(false);
                 entity.Property(e => e.Category).HasConversion<int>();
                 entity.Property(e => e.Status).HasConversion<int>();
                 entity.Property(e => e.Tags).HasConversion(

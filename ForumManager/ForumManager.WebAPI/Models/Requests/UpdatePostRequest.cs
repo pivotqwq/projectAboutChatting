@@ -22,6 +22,11 @@ namespace ForumManager.WebAPI.Models.Requests
         public string Content { get; set; } = string.Empty;
 
         /// <summary>
+        /// 帖子标题图片（Base64，可选）
+        /// </summary>
+        public string? TitleImageBase64 { get; set; }
+
+        /// <summary>
         /// 标签列表
         /// </summary>
         public List<string>? Tags { get; set; }
