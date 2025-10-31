@@ -575,7 +575,7 @@ GET /api/users/3fa85f64-5717-4562-b3fc-2c963f66afa6/matches?status=2&page=1&page
 
 **接口描述**: 更新匹配记录的状态
 
-**认证要求**: 需要JWT Token
+**认证要求**: 需要 JWT Token
 
 **请求参数**:
 ```json
