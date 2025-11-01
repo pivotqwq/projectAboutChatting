@@ -1,6 +1,8 @@
 using ForumManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Text.Json;
+using System.Linq;
 
 namespace ForumManager.Infrastructure
 {
@@ -35,6 +37,12 @@ namespace ForumManager.Infrastructure
                 entity.Property(e => e.Tags).HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
                     v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>()
+                ).Metadata.SetValueComparer(
+                    new ValueComparer<List<string>>(
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()
+                    )
                 );
                 entity.Property(e => e.ViewCount).HasDefaultValue(0);
                 entity.Property(e => e.LikeCount).HasDefaultValue(0);

@@ -155,6 +155,64 @@ namespace ChatService.Controllers
                 return StatusCode(500, new { error = "服务器内部错误" });
             }
         }
+
+        /// <summary>
+        /// 获取频道历史消息
+        /// </summary>
+        /// <param name="channelId">频道ID</param>
+        /// <param name="beforeUtc">获取此时间之前的消息（可选，ISO 8601 UTC格式）</param>
+        /// <param name="pageSize">每页消息数量（默认50，最大200）</param>
+        /// <returns>消息列表（按时间升序）</returns>
+        /// <response code="200">成功返回消息列表</response>
+        /// <response code="400">参数错误</response>
+        /// <response code="401">未授权访问</response>
+        [HttpGet("channel/{channelId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetChannelHistory(
+            [FromRoute] string channelId, 
+            [FromQuery] DateTime? beforeUtc, 
+            [FromQuery] int pageSize = 50)
+        {
+            try
+            {
+                // 验证参数
+                if (string.IsNullOrWhiteSpace(channelId))
+                {
+                    return BadRequest(new { error = "channelId 不能为空" });
+                }
+
+                // 获取当前用户ID（用于日志）
+                var currentUserId = GetCurrentUserId();
+
+                // 验证页面大小
+                if (pageSize <= 0)
+                {
+                    pageSize = 50;
+                }
+                else if (pageSize > 200)
+                {
+                    pageSize = 200;
+                }
+
+                _logger.LogInformation(
+                    "用户 {CurrentUserId} 请求频道 {ChannelId} 的历史消息，pageSize: {PageSize}, beforeUtc: {BeforeUtc}",
+                    currentUserId, channelId, pageSize, beforeUtc);
+
+                var messages = await _repo.GetChannelHistoryAsync(channelId, beforeUtc, pageSize);
+                
+                // 转换BsonDocument为普通对象，避免序列化类型冲突
+                var result = messages.Select(doc => MongoDB.Bson.BsonTypeMapper.MapToDotNetValue(doc)).ToList();
+                
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取频道历史失败，频道ID: {ChannelId}", channelId);
+                return StatusCode(500, new { error = "服务器内部错误" });
+            }
+        }
     }
 }
 

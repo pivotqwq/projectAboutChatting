@@ -58,6 +58,21 @@ namespace ChatService.Services
             docs.Reverse();
             return docs;
         }
+
+        public async Task<IReadOnlyList<BsonDocument>> GetChannelHistoryAsync(string channelId, DateTime? beforeUtc, int pageSize)
+        {
+            var builder = Builders<BsonDocument>.Filter;
+            // 频道消息使用 GroupId 字段存储 channelId（与群聊复用字段）
+            var filter = builder.Eq("Type", "channel") & builder.Eq("GroupId", channelId);
+            if (beforeUtc.HasValue)
+            {
+                filter &= builder.Lt("CreatedAt", beforeUtc.Value);
+            }
+            var sort = Builders<BsonDocument>.Sort.Descending("CreatedAt");
+            var docs = await _messages.Find(filter).Sort(sort).Limit(pageSize).ToListAsync();
+            docs.Reverse();
+            return docs;
+        }
     }
 }
 

@@ -2,7 +2,7 @@
 
 ## 基础信息
 
-- **Base URL**: `/api`
+ - **Base URL**: `http://localhost:9291/api`
 - **数据格式**: JSON
 - **编码**: UTF-8
 
@@ -663,9 +663,443 @@ Authorization: Bearer {access_token}
 
 ---
 
+### 7. 通过用户名模糊查询用户（用于添加好友/加入群聊）
+
+**接口地址**: `GET /api/UsersMgr/search`
+
+**接口描述**: 通过用户名进行模糊查询，返回匹配的用户列表（包含用户ID和用户名）
+
+**认证要求**: 需要JWT Token
+
+**请求头**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| keyword | string | 是 | - | 搜索关键词（用户名） |
+| pageIndex | int | 否 | 0 | 页码，从0开始 |
+| pageSize | int | 否 | 20 | 每页数量，最大100 |
+
+**请求示例**:
+
+```
+GET /api/UsersMgr/search?keyword=张三&pageIndex=0&pageSize=20
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "data": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "name": "张三001"
+    },
+    {
+      "id": "7aa0d3be-6f0b-4f1d-8c65-3d8a6a6d5c3b",
+      "name": "张三002"
+    }
+  ],
+  "pageIndex": 0,
+  "pageSize": 20,
+  "totalCount": 2,
+  "totalPages": 1,
+  "hasPreviousPage": false,
+  "hasNextPage": false
+}
+```
+
+**错误响应**:
+
+- `400 Bad Request`: "搜索关键词不能为空"
+- `401 Unauthorized`: "未授权（Token无效或未提供）"
+
+**使用场景**: 
+- 添加好友时搜索用户
+- 群聊中添加成员时搜索用户
+
+---
+
 ## 通用说明
 
-### 认证方式
+## 好友关系接口
+
+> 说明：好友关系为应用内的“关系数据”，用于 ChatService 私聊入口与联系人列表。仅返回用户ID，展示信息请调用既有用户资料接口补齐。
+
+### 1. 获取我的好友列表
+
+**接口地址**: `GET /api/friends`
+
+**认证要求**: 需要 JWT Token
+
+**成功响应** (200 OK): 返回我添加的好友用户ID数组
+
+```json
+[
+  "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "7aa0d3be-6f0b-4f1d-8c65-3d8a6a6d5c3b"
+]
+```
+
+### 2. 发送好友请求
+
+**接口地址**: `POST /api/friends/request/{receiverId}`
+
+**接口描述**: 向指定用户发送好友请求（需要对方同意）
+
+**请求参数**:
+- `receiverId` (Guid): 接收者用户ID
+
+**成功响应** (200 OK):
+```json
+{
+  "requestId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "message": "好友请求已发送"
+}
+```
+
+**错误响应**:
+- `400 Bad Request`: "不能添加自己为好友"
+- `400 Bad Request`: "已经是好友了"
+- `400 Bad Request`: "已发送好友请求，等待对方处理"
+
+### 3. 获取我收到的好友请求列表
+
+**接口地址**: `GET /api/friends/requests/received`
+
+**接口描述**: 获取待处理的好友请求列表
+
+**成功响应** (200 OK):
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "requesterId": "7aa0d3be-6f0b-4f1d-8c65-3d8a6a6d5c3b",
+    "status": "pending",
+    "createdAt": "2025-10-31T00:00:00Z"
+  }
+]
+```
+
+### 4. 获取我发送的好友请求列表
+
+**接口地址**: `GET /api/friends/requests/sent`
+
+**接口描述**: 获取我发送的好友请求列表（包括已处理状态）
+
+**成功响应** (200 OK):
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "receiverId": "7aa0d3be-6f0b-4f1d-8c65-3d8a6a6d5c3b",
+    "status": "pending",
+    "createdAt": "2025-10-31T00:00:00Z",
+    "respondedAt": null
+  }
+]
+```
+
+### 5. 同意好友请求
+
+**接口地址**: `POST /api/friends/requests/{requestId}/accept`
+
+**接口描述**: 同意指定的好友请求，同意后自动建立双向好友关系
+
+**路径参数**:
+- `requestId` (Guid): 好友请求ID
+
+**成功响应** (200 OK):
+```json
+{
+  "message": "已同意好友请求"
+}
+```
+
+**错误响应**:
+- `404 Not Found`: "好友请求不存在"
+- `400 Bad Request`: "该好友请求已处理"
+
+### 6. 拒绝好友请求
+
+**接口地址**: `POST /api/friends/requests/{requestId}/reject`
+
+**接口描述**: 拒绝指定的好友请求
+
+**路径参数**:
+- `requestId` (Guid): 好友请求ID
+
+**成功响应** (200 OK):
+```json
+{
+  "message": "已拒绝好友请求"
+}
+```
+
+**错误响应**:
+- `404 Not Found`: "好友请求不存在"
+- `400 Bad Request`: "该好友请求已处理"
+
+### 7. 删除好友
+
+**接口地址**: `DELETE /api/friends/{friendUserId}`
+
+**说明**: 双向删除关系。
+
+**成功响应**: `204 No Content`
+
+---
+
+## 群组与成员接口
+
+> 说明：群组为“权威关系数据”，ChatService 在群聊前会调用本服务校验群成员身份。
+
+### 1. 获取我加入的群组
+
+**接口地址**: `GET /api/groups/mine`
+
+**认证要求**: 需要 JWT Token
+
+**成功响应** (200 OK):
+
+```json
+[
+  { "id": "a1b2c3...", "name": "技术群", "ownerId": "...", "createdAt": "2025-10-31T00:00:00Z", "role": "owner" },
+  { "id": "d4e5f6...", "name": "校友群", "ownerId": "...", "createdAt": "2025-10-31T00:00:00Z", "role": "member" }
+]
+```
+
+### 2. 创建群组
+
+**接口地址**: `POST /api/groups`
+
+**请求体**:
+
+```json
+{ "name": "群组名称" }
+```
+
+**成功响应** (200 OK):
+
+```json
+{ "id": "a1b2c3...", "name": "群组名称", "ownerId": "...", "createdAt": "2025-10-31T00:00:00Z" }
+```
+
+### 3. 获取群成员列表
+
+**接口地址**: `GET /api/groups/{groupId}/members`
+
+**成功响应** (200 OK):
+
+```json
+[
+  { "userId": "...", "role": "owner", "joinedAt": "2025-10-31T00:00:00Z" },
+  { "userId": "...", "role": "member", "joinedAt": "2025-10-31T00:00:00Z" }
+]
+```
+
+### 4. 发送群聊加入申请
+
+**接口地址**: `POST /api/groups/{groupId}/request`
+
+**接口描述**: 向指定群组发送加入申请（需要群主同意）
+
+**路径参数**:
+- `groupId` (Guid): 群组ID
+
+**成功响应** (200 OK):
+```json
+{
+  "requestId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "message": "加入申请已发送"
+}
+```
+
+**错误响应**:
+- `404 Not Found`: "群组不存在"
+- `400 Bad Request`: "已经是群成员了"
+- `400 Bad Request`: "已发送加入申请，等待处理"
+
+### 5. 获取群组的加入申请列表（仅 owner）
+
+**接口地址**: `GET /api/groups/{groupId}/requests`
+
+**接口描述**: 获取指定群组的待处理加入申请列表
+
+**路径参数**:
+- `groupId` (Guid): 群组ID
+
+**成功响应** (200 OK):
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "requesterId": "7aa0d3be-6f0b-4f1d-8c65-3d8a6a6d5c3b",
+    "status": "pending",
+    "createdAt": "2025-10-31T00:00:00Z"
+  }
+]
+```
+
+**错误响应**:
+- `403 Forbidden`: "无权限（非群主）"
+
+### 6. 获取我发送的群聊加入申请列表
+
+**接口地址**: `GET /api/groups/requests/my`
+
+**接口描述**: 获取我发送的所有群聊加入申请（包括已处理状态）
+
+**成功响应** (200 OK):
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "groupId": "8bb4e6cf-7g1c-5h2e-9d76-4e9b7b7e6d4c",
+    "status": "pending",
+    "createdAt": "2025-10-31T00:00:00Z",
+    "respondedAt": null
+  }
+]
+```
+
+### 7. 同意群聊加入申请（仅 owner）
+
+**接口地址**: `POST /api/groups/{groupId}/requests/{requestId}/accept`
+
+**接口描述**: 同意指定的加入申请，同意后自动添加为群成员
+
+**路径参数**:
+- `groupId` (Guid): 群组ID
+- `requestId` (Guid): 加入申请ID
+
+**成功响应** (200 OK):
+```json
+{
+  "message": "已同意加入申请"
+}
+```
+
+**错误响应**:
+- `403 Forbidden`: "无权限（非群主）"
+- `404 Not Found`: "加入申请不存在"
+- `400 Bad Request`: "该申请已处理"
+
+### 8. 拒绝群聊加入申请（仅 owner）
+
+**接口地址**: `POST /api/groups/{groupId}/requests/{requestId}/reject`
+
+**接口描述**: 拒绝指定的加入申请
+
+**路径参数**:
+- `groupId` (Guid): 群组ID
+- `requestId` (Guid): 加入申请ID
+
+**成功响应** (200 OK):
+```json
+{
+  "message": "已拒绝加入申请"
+}
+```
+
+**错误响应**:
+- `403 Forbidden`: "无权限（非群主）"
+- `404 Not Found`: "加入申请不存在"
+- `400 Bad Request`: "该申请已处理"
+
+### 9. 添加群成员（仅 owner，管理员直接添加）
+
+**接口地址**: `POST /api/groups/{groupId}/members/{userId}`
+
+**接口描述**: 群主直接添加成员（无需申请流程）
+
+**路径参数**:
+- `groupId` (Guid): 群组ID
+- `userId` (Guid): 用户ID
+
+**成功响应**: `200 OK`
+
+**错误响应**:
+- `403 Forbidden`: "无权限（非群主）"
+
+### 10. 移除群成员（仅 owner）
+
+**接口地址**: `DELETE /api/groups/{groupId}/members/{userId}`
+
+**成功响应**: `204 No Content`
+
+### 11. 通过群组名称模糊查询群组
+
+**接口地址**: `GET /api/groups/search`
+
+**接口描述**: 通过群组名称进行模糊查询，返回匹配的群组列表（包含群组ID和群组名称）
+
+**认证要求**: 需要 JWT Token
+
+**请求头**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| keyword | string | 是 | - | 搜索关键词（群组名称） |
+| pageIndex | int | 否 | 0 | 页码，从0开始 |
+| pageSize | int | 否 | 20 | 每页数量，最大100 |
+
+**请求示例**:
+
+```
+GET /api/groups/search?keyword=技术&pageIndex=0&pageSize=20
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "data": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "name": "技术交流群",
+      "ownerId": "7aa0d3be-6f0b-4f1d-8c65-3d8a6a6d5c3b",
+      "createdAt": "2025-10-31T00:00:00Z"
+    },
+    {
+      "id": "8bb4e6cf-7g1c-5h2e-9d76-4e9b7b7e6d4c",
+      "name": "技术讨论组",
+      "ownerId": "9cc5f7dg-8h2d-6i3f-0e87-5f0c8c8f7e5d",
+      "createdAt": "2025-10-31T00:00:00Z"
+    }
+  ],
+  "pageIndex": 0,
+  "pageSize": 20,
+  "totalCount": 2,
+  "totalPages": 1,
+  "hasPreviousPage": false,
+  "hasNextPage": false
+}
+```
+
+**错误响应**:
+
+- `400 Bad Request`: "搜索关键词不能为空"
+- `401 Unauthorized`: "未授权（Token无效或未提供）"
+
+**使用场景**: 
+- 查找并加入感兴趣的群组
+- 搜索特定主题的群组
+
+---
+
+## 认证方式
 
 部分接口需要JWT认证，需要在请求头中携带Token：
 

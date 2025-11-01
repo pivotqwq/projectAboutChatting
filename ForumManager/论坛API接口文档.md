@@ -4,7 +4,7 @@
 
 论坛管理微服务提供完整的论坛功能，包括帖子发布、评论、点赞、收藏等核心功能。
 
-**基础URL**: `https://localhost:7000/api`  
+**基础URL**: `http://localhost:9292/api`  
 **认证方式**: JWT Bearer Token  
 **数据格式**: JSON  
 
@@ -47,6 +47,7 @@ Authorization: Bearer {your_jwt_token}
       "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       "title": "帖子标题",
       "content": "帖子内容",
+      "titleImageBase64": null,
       "category": 1,
       "authorId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       "createdAt": "2024-01-01T00:00:00Z",
@@ -95,6 +96,7 @@ Authorization: Bearer {your_jwt_token}
   "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "title": "帖子标题",
   "content": "帖子内容",
+  "titleImageBase64": null,
   "category": 1,
   "authorId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "createdAt": "2024-01-01T00:00:00Z",
@@ -129,6 +131,7 @@ Authorization: Bearer {your_jwt_token}
 {
   "title": "帖子标题",
   "content": "帖子内容",
+  "titleImageBase64": "BASE64_STRING",
   "category": 1,
   "tags": ["标签1", "标签2"]
 }
@@ -139,6 +142,7 @@ Authorization: Bearer {your_jwt_token}
 - `content`: 必填，最大10000字符  
 - `category`: 必填，PostCategory枚举值
 - `tags`: 可选，字符串数组
+ - `titleImageBase64`: 可选，图片Base64字符串（建议小于1MB）
 
 **响应**: 返回创建的 `PostResponse`
 
@@ -156,6 +160,7 @@ Authorization: Bearer {your_jwt_token}
 {
   "title": "新标题",
   "content": "新内容", 
+  "titleImageBase64": "BASE64_STRING",
   "tags": ["新标签1", "新标签2"]
 }
 ```
@@ -323,6 +328,7 @@ Authorization: Bearer {your_jwt_token}
   "id": "Guid",
   "title": "string",
   "content": "string", 
+  "titleImageBase64": "string?",
   "category": "PostCategory",
   "authorId": "Guid",
   "createdAt": "DateTime",
@@ -407,50 +413,12 @@ Authorization: Bearer {your_jwt_token}
 - `404 Not Found` - 资源不存在
 - `500 Internal Server Error` - 服务器内部错误
 
-## 使用示例
-
-### JavaScript (Fetch API)
-```javascript
-// 获取帖子列表
-const response = await fetch('/api/posts?pageIndex=0&pageSize=20&category=1');
-const data = await response.json();
-
-// 创建帖子
-const createPost = async (postData) => {
-  const response = await fetch('/api/posts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
-    },
-    body: JSON.stringify(postData)
-  });
-  return response.json();
-};
-```
-
-### cURL
-```bash
-# 获取帖子列表
-curl -X GET "https://localhost:7000/api/posts?pageIndex=0&pageSize=20"
-
-# 创建帖子
-curl -X POST "https://localhost:7000/api/posts" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_jwt_token" \
-  -d '{
-    "title": "测试帖子",
-    "content": "这是测试内容",
-    "category": 1,
-    "tags": ["测试", "API"]
-  }'
-```
-
 ## 注意事项
 
 1. **分页**: 所有分页接口都从0开始计数
-2. **缓存**: 帖子详情和热门帖子有Redis缓存，缓存时间分别为5分钟和10分钟
+2. **缓存**: 服务可选启用Redis缓存（如配置），用于热门帖子和帖子详情
 3. **权限**: 只有帖子和评论的作者才能编辑或删除自己的内容
 4. **字符限制**: 标题最大200字符，内容最大10000字符，评论最大2000字符
 5. **软删除**: 删除操作采用软删除，数据不会真正从数据库移除
+6. **Swagger 文档**: 开发环境访问 `http://localhost:9292/swagger` 查看并调试接口
 

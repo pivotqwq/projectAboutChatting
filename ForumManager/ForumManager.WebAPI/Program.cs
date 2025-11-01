@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 using ForumManager.Domain.Events;
+using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,7 +56,10 @@ builder.Services.AddSwaggerGen(options =>
 // 配置数据库
 builder.Services.AddDbContext<ForumDBContext>(options =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("ForumConnection"));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("ForumConnection"),
+        npgsqlOptionsAction: sql => sql.MigrationsAssembly("ForumManager.Infrastructure")
+    );
 });
 
 // 配置Redis缓存（可选）
@@ -154,20 +158,121 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// 自动迁移数据库
-using (var scope = app.Services.CreateScope())
+// 数据库迁移配置（生产环境规范实现）
+await ApplyDatabaseMigrationsAsync(app);
+
+app.Run();
+
+/// <summary>
+/// 应用数据库迁移（生产环境规范实现）
+/// </summary>
+static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
 {
+    // 检查是否启用自动迁移
+    var runMigrations = app.Configuration.GetValue<bool>("Database:RunMigrationsOnStartup", defaultValue: true);
+    if (!runMigrations)
+    {
+        var earlyLogger = app.Services.GetRequiredService<ILogger<Program>>();
+        earlyLogger.LogInformation("数据库自动迁移已禁用，跳过迁移步骤");
+        return;
+    }
+
+    using var scope = app.Services.CreateScope();
+    var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger<Program>();
+
     try
     {
+        logger.LogInformation("开始执行数据库迁移...");
+
         var context = scope.ServiceProvider.GetRequiredService<ForumDBContext>();
-        context.Database.Migrate();
+        var database = context.Database;
+
+        // 检查数据库连接
+        if (!await database.CanConnectAsync())
+        {
+            logger.LogError("无法连接到数据库，请检查连接字符串配置");
+            return;
+        }
+
+        logger.LogInformation("数据库连接成功");
+
+        // 检查是否有待应用的迁移
+        var pendingMigrations = await database.GetPendingMigrationsAsync();
+        var pendingMigrationsList = pendingMigrations.ToList();
+
+        if (pendingMigrationsList.Count == 0)
+        {
+            logger.LogInformation("数据库已是最新版本，无需迁移");
+            return;
+        }
+
+        logger.LogInformation("发现 {Count} 个待应用的迁移: {Migrations}",
+            pendingMigrationsList.Count,
+            string.Join(", ", pendingMigrationsList));
+
+        // 执行迁移（带重试机制）
+        const int maxRetries = 3;
+        const int retryDelaySeconds = 5;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                await database.MigrateAsync();
+                logger.LogInformation("数据库迁移成功完成");
+                return;
+            }
+            catch (Exception ex) when (attempt < maxRetries && IsRetryableException(ex))
+            {
+                logger.LogWarning(ex, "迁移尝试 {Attempt}/{MaxRetries} 失败，{Delay}秒后重试...",
+                    attempt, maxRetries, retryDelaySeconds);
+                await Task.Delay(TimeSpan.FromSeconds(retryDelaySeconds));
+            }
+        }
+
+        // 所有重试都失败
+        throw new InvalidOperationException($"数据库迁移在 {maxRetries} 次尝试后仍然失败");
+    }
+    catch (Npgsql.PostgresException pgEx)
+    {
+        // PostgreSQL 特定错误处理
+        logger.LogError(pgEx,
+            "数据库迁移失败 - PostgreSQL错误: {SqlState} - {MessageText}. " +
+            "请检查数据库权限（需要USAGE和CREATE权限）和迁移历史表访问权限。",
+            pgEx.SqlState, pgEx.MessageText);
     }
     catch (Exception ex)
     {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "数据库迁移失败");
-        // 不抛出异常，允许服务继续运行（可能需要手动运行迁移）
+        logger.LogError(ex,
+            "数据库迁移失败。错误详情: {ErrorMessage}. " +
+            "请检查数据库连接字符串、网络连接和数据库权限。",
+            ex.Message);
+    }
+
+    // 生产环境：迁移失败时可以选择停止服务或继续运行
+    var stopOnMigrationFailure = app.Configuration.GetValue<bool>("Database:StopOnMigrationFailure", defaultValue: false);
+    if (stopOnMigrationFailure)
+    {
+        logger.LogCritical("由于迁移失败且 StopOnMigrationFailure=true，应用将退出");
+        Environment.Exit(1);
+    }
+    else
+    {
+        logger.LogWarning(
+            "数据库迁移失败，但应用将继续运行。请尽快手动解决迁移问题，" +
+            "否则数据库操作可能会失败。");
     }
 }
 
-app.Run();
+/// <summary>
+/// 判断异常是否可重试
+/// </summary>
+static bool IsRetryableException(Exception ex)
+{
+    // 网络错误、连接超时等可重试的错误
+    return ex is TimeoutException
+        || ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("network", StringComparison.OrdinalIgnoreCase);
+}

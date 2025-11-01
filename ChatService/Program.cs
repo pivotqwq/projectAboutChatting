@@ -98,7 +98,8 @@ builder.Services
 
 builder.Services.AddAuthorization();
 builder.Services.AddSignalR();
-
+builder.Services.AddHttpClient();
+            
 // 添加CORS支持（允许前端访问SignalR）
 builder.Services.AddCors(options =>
 {
@@ -123,6 +124,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer
 builder.Services.AddSingleton<MessageRepository>();
 builder.Services.AddSingleton<OnlineEventPublisher>();
 builder.Services.AddSingleton<PresenceService>();
+builder.Services.AddSingleton<GroupMemberCache>();
 
 // Minimal placeholder hub to wire mapping; concrete hub file added separately
 builder.Services.AddSingleton<IUserIdProvider, NameUserIdProvider>();

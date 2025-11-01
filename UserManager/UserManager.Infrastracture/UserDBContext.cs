@@ -14,6 +14,11 @@ namespace UserManager.Infrastracture
         public DbSet<User> Users { get; set; }
         public DbSet<UserLoginHistory> UserLoginHistories { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
+        public DbSet<Friendship> Friendships { get; set; }
+        public DbSet<Group> Groups { get; set; }
+        public DbSet<GroupMember> GroupMembers { get; set; }
+        public DbSet<FriendRequest> FriendRequests { get; set; }
+        public DbSet<GroupJoinRequest> GroupJoinRequests { get; set; }
         
         // 用于运行时的构造函数
         public UserDBContext(DbContextOptions<UserDBContext> opt) : base(opt) 

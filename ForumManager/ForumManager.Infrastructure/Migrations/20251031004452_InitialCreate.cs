@@ -1,3 +1,4 @@
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -18,6 +19,7 @@ namespace ForumManager.Infrastructure.Migrations
                     AuthorId = table.Column<Guid>(type: "uuid", nullable: false),
                     Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Content = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
+                    TitleImageBase64 = table.Column<string>(type: "text", nullable: true),
                     Category = table.Column<int>(type: "integer", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
@@ -119,6 +121,22 @@ namespace ForumManager.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_CommentLikes_CommentId",
+                table: "CommentLikes",
+                column: "CommentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommentLikes_CommentId_UserId",
+                table: "CommentLikes",
+                columns: new[] { "CommentId", "UserId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommentLikes_UserId",
+                table: "CommentLikes",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Comments_AuthorId",
                 table: "Comments",
                 column: "AuthorId");
@@ -144,22 +162,6 @@ namespace ForumManager.Infrastructure.Migrations
                 column: "PostId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CommentLikes_CommentId",
-                table: "CommentLikes",
-                column: "CommentId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_CommentLikes_CommentId_UserId",
-                table: "CommentLikes",
-                columns: new[] { "CommentId", "UserId" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_CommentLikes_UserId",
-                table: "CommentLikes",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_PostFavorites_PostId",
                 table: "PostFavorites",
                 column: "PostId");
@@ -174,11 +176,6 @@ namespace ForumManager.Infrastructure.Migrations
                 name: "IX_PostFavorites_UserId",
                 table: "PostFavorites",
                 column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PostLikes_LikeCount",
-                table: "PostLikes",
-                column: "LikeCount");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PostLikes_PostId",

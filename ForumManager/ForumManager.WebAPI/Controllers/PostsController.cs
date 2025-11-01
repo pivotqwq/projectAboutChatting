@@ -174,7 +174,7 @@ namespace ForumManager.WebAPI.Controllers
         /// </summary>
         [HttpPut("{postId}")]
         [Authorize]
-        public async Task<ActionResult<PostResponse>> UpdatePost(Guid postId, [FromBody] UpdatePostRequest request)
+        public async Task<ActionResult<object>> UpdatePost(Guid postId, [FromBody] UpdatePostRequest request)
         {
             var userId = GetCurrentUserId();
             var post = await _forumDomainService.EditPostAsync(postId, userId, request.Title, request.Content, request.Tags, request.TitleImageBase64);

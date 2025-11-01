@@ -302,6 +302,65 @@ namespace UserManager.WebAPI.Controllers
             await userProfileRepository.UpdateAsync(profile);
             return Ok("个人信息更新成功");
         }
+
+        /// <summary>
+        /// 通过用户名模糊查询用户
+        /// </summary>
+        /// <param name="keyword">搜索关键词（用户名）</param>
+        /// <param name="pageIndex">页码，从0开始</param>
+        /// <param name="pageSize">每页数量，默认20，最大100</param>
+        /// <returns>用户列表（包含用户ID和用户名）</returns>
+        [HttpGet("search")]
+        [Authorize] // 需要JWT认证
+        public async Task<IActionResult> SearchUsersByName(
+            [FromQuery] string keyword,
+            [FromQuery] int pageIndex = 0,
+            [FromQuery] int pageSize = 20)
+        {
+            // 验证参数
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return BadRequest(new { error = "搜索关键词不能为空" });
+            }
+
+            if (pageSize <= 0)
+            {
+                pageSize = 20;
+            }
+            else if (pageSize > 100)
+            {
+                pageSize = 100;
+            }
+
+            // 模糊查询用户名（包含关键词）
+            var query = dbCtx.Users
+                .Where(u => u.Name.Contains(keyword))
+                .OrderBy(u => u.Name)
+                .Skip(pageIndex * pageSize)
+                .Take(pageSize);
+
+            var users = await query
+                .Select(u => new { u.Id, u.Name })
+                .ToListAsync();
+
+            // 获取总数
+            var totalCount = await dbCtx.Users
+                .Where(u => u.Name.Contains(keyword))
+                .CountAsync();
+
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            return Ok(new
+            {
+                data = users,
+                pageIndex,
+                pageSize,
+                totalCount,
+                totalPages,
+                hasPreviousPage = pageIndex > 0,
+                hasNextPage = pageIndex < totalPages - 1
+            });
+        }
     }
 
 }

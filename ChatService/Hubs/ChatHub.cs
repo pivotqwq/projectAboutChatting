@@ -4,6 +4,8 @@ using MongoDB.Driver;
 using System.Security.Claims;
 using MongoDB.Bson;
 using ChatService.Services;
+using System.Net.Http.Json;
+using System.Net.Http.Headers;
 
 namespace ChatService.Hubs
 {
@@ -18,19 +20,28 @@ namespace ChatService.Hubs
         private readonly OnlineEventPublisher _onlinePublisher;
         private readonly PresenceService _presenceService;
         private readonly ILogger<ChatHub> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
+        private readonly GroupMemberCache _groupMemberCache;
 
         public ChatHub(
             IMongoDatabase database, 
             MessageRepository messageRepository, 
             OnlineEventPublisher onlinePublisher, 
             PresenceService presenceService,
-            ILogger<ChatHub> logger)
+            ILogger<ChatHub> logger,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration,
+            GroupMemberCache groupMemberCache)
         {
             _database = database;
             _messageRepository = messageRepository;
             _onlinePublisher = onlinePublisher;
             _presenceService = presenceService;
             _logger = logger;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
+            _groupMemberCache = groupMemberCache;
         }
 
         /// <summary>
@@ -152,6 +163,13 @@ namespace ChatService.Hubs
                     throw new HubException("群组ID不能为空");
                 }
 
+                // 成员校验
+                var isMember = await IsUserGroupMemberAsync(groupId, fromUserId);
+                if (!isMember)
+                {
+                    throw new HubException("您不是该群成员，无法发送消息");
+                }
+
                 if (string.IsNullOrWhiteSpace(content))
                 {
                     throw new HubException("消息内容不能为空");
@@ -195,9 +213,14 @@ namespace ChatService.Hubs
                     throw new HubException("群组ID不能为空");
                 }
 
-                await Groups.AddToGroupAsync(Context.ConnectionId, groupId);
-                
                 var userId = GetUserId();
+                // 成员校验（允许非成员加入需看业务，这里要求必须已加入群）
+                var isMember = await IsUserGroupMemberAsync(groupId, userId);
+                if (!isMember)
+                {
+                    throw new HubException("您不是该群成员，无法加入");
+                }
+                await Groups.AddToGroupAsync(Context.ConnectionId, groupId);
                 _logger.LogInformation("用户 {UserId} 加入群组 {GroupId}", userId ?? "unknown", groupId);
             }
             catch (HubException)
@@ -241,6 +264,114 @@ namespace ChatService.Hubs
         }
 
         /// <summary>
+        /// 加入频道（公屏聊天）
+        /// </summary>
+        /// <param name="channelId">频道ID</param>
+        public async Task JoinChannel(string channelId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(channelId))
+                {
+                    throw new HubException("频道ID不能为空");
+                }
+
+                await Groups.AddToGroupAsync(Context.ConnectionId, channelId);
+                
+                var userId = GetUserId();
+                _logger.LogInformation("用户 {UserId} 加入频道 {ChannelId}", userId ?? "unknown", channelId);
+            }
+            catch (HubException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "加入频道失败，ChannelId: {ChannelId}", channelId);
+                throw new HubException("加入频道失败，请稍后重试");
+            }
+        }
+
+        /// <summary>
+        /// 离开频道
+        /// </summary>
+        /// <param name="channelId">频道ID</param>
+        public async Task LeaveChannel(string channelId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(channelId))
+                {
+                    throw new HubException("频道ID不能为空");
+                }
+
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, channelId);
+                
+                var userId = GetUserId();
+                _logger.LogInformation("用户 {UserId} 离开频道 {ChannelId}", userId ?? "unknown", channelId);
+            }
+            catch (HubException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "离开频道失败，ChannelId: {ChannelId}", channelId);
+                throw new HubException("离开频道失败，请稍后重试");
+            }
+        }
+
+        /// <summary>
+        /// 发送频道消息（公屏聊天）
+        /// </summary>
+        /// <param name="channelId">频道ID</param>
+        /// <param name="content">消息内容</param>
+        public async Task SendChannelMessage(string channelId, string content)
+        {
+            try
+            {
+                var fromUserId = GetUserId();
+                if (string.IsNullOrWhiteSpace(fromUserId))
+                {
+                    throw new HubException("未授权：无法获取用户身份");
+                }
+
+                if (string.IsNullOrWhiteSpace(channelId))
+                {
+                    throw new HubException("频道ID不能为空");
+                }
+
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    throw new HubException("消息内容不能为空");
+                }
+
+                if (content.Length > 5000)
+                {
+                    throw new HubException("消息内容超过最大长度限制（5000字符）");
+                }
+
+                var msg = ChatMessage.CreateChannel(fromUserId, channelId, content);
+                await _messageRepository.InsertAsync(msg.ToBsonDocument());
+
+                // 发送给频道所有成员
+                await Clients.Group(channelId).SendAsync("ReceiveChannelMessage", msg);
+
+                _logger.LogInformation("频道消息已发送: {FromUserId} -> Channel:{ChannelId}, MsgId: {MessageId}", 
+                    fromUserId, channelId, msg.Id);
+            }
+            catch (HubException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "发送频道消息失败");
+                throw new HubException("发送消息失败，请稍后重试");
+            }
+        }
+
+        /// <summary>
         /// 从 JWT Claims 中获取用户ID
         /// </summary>
         private string GetUserId()
@@ -251,6 +382,94 @@ namespace ChatService.Hubs
                    ?? Context.UserIdentifier 
                    ?? Context.User?.Identity?.Name 
                    ?? string.Empty;
+        }
+
+        private async Task<bool> IsUserGroupMemberAsync(string groupId, string userId)
+        {
+            if (!Guid.TryParse(groupId, out var gid) || !Guid.TryParse(userId, out var uid))
+            {
+                return false;
+            }
+            
+            // 先尝试从缓存获取
+            var cachedResult = await _groupMemberCache.IsMemberFromCacheAsync(groupId, userId);
+            if (cachedResult.HasValue)
+            {
+                return cachedResult.Value; // 缓存命中，直接返回
+            }
+
+            // 缓存未命中，调用 API 并更新缓存
+            try
+            {
+                var baseUrl = _configuration["UserManager:BaseUrl"] ?? "http://localhost:9291";
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(5); // 减少超时时间
+                
+                // 从 SignalR Context 中获取 JWT token
+                var httpContext = Context.GetHttpContext();
+                string? token = null;
+                
+                if (httpContext != null)
+                {
+                    token = httpContext.Request.Query["access_token"].FirstOrDefault();
+                    if (string.IsNullOrEmpty(token))
+                    {
+                        var authHeader = httpContext.Request.Headers["Authorization"].FirstOrDefault();
+                        if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                        {
+                            token = authHeader.Substring("Bearer ".Length).Trim();
+                        }
+                    }
+                }
+                
+                if (string.IsNullOrEmpty(token))
+                {
+                    return false;
+                }
+                
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                
+                var url = $"{baseUrl}/api/groups/{gid}/members";
+                var response = await client.GetAsync(url);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("调用 UserManager API 失败: StatusCode={StatusCode}, GroupId={GroupId}", 
+                        response.StatusCode, groupId);
+                    return false;
+                }
+                
+                var members = await response.Content.ReadFromJsonAsync<List<MemberDto>>();
+                
+                if (members == null || members.Count == 0)
+                {
+                    return false;
+                }
+                
+                // 更新缓存
+                var memberIds = members.Select(m => m.UserId).ToList();
+                await _groupMemberCache.CacheGroupMembersAsync(groupId, memberIds);
+                
+                // 检查是否为成员
+                var isMember = members.Any(m => m.UserId == uid);
+                return isMember;
+            }
+            catch (TaskCanceledException)
+            {
+                _logger.LogWarning("调用 UserManager API 超时: GroupId={GroupId}", groupId);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "校验群成员失败: GroupId={GroupId}, UserId={UserId}", groupId, userId);
+                return false;
+            }
+        }
+
+        private class MemberDto
+        {
+            public Guid UserId { get; set; }
+            public string? Role { get; set; }
         }
     }
 
@@ -279,6 +498,30 @@ namespace ChatService.Hubs
         /// </summary>
         public static ChatMessage CreateGroup(string fromUserId, string groupId, string content)
             => new(Guid.NewGuid().ToString("N"), "group", fromUserId, null, groupId, content, DateTime.UtcNow);
+
+        /// <summary>
+        /// 创建频道消息
+        /// </summary>
+        public static ChatMessage CreateChannel(string fromUserId, string channelId, string content)
+            => new(Guid.NewGuid().ToString("N"), "channel", fromUserId, null, channelId, content, DateTime.UtcNow);
+
+        /// <summary>
+        /// 转换为 BsonDocument
+        /// </summary>
+        public BsonDocument ToBsonDocument()
+        {
+            return new BsonDocument
+            {
+                { "_id", Id },
+                { "Id", Id },
+                { "Type", Type },
+                { "FromUserId", FromUserId },
+                { "ToUserId", ToUserId != null ? (BsonValue)ToUserId : BsonNull.Value },
+                { "GroupId", GroupId != null ? (BsonValue)GroupId : BsonNull.Value },
+                { "Content", Content },
+                { "CreatedAt", CreatedAt }
+            };
+        }
     }
 }
 
