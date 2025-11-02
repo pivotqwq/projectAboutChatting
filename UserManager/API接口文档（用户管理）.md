@@ -665,7 +665,7 @@ Authorization: Bearer {access_token}
 
 ### 7. 通过用户名模糊查询用户（用于添加好友/加入群聊）
 
-**接口地址**: `GET /api/UsersMgr/search`
+**接口地址**: `GET /api/UsersMgr/SearchUsersByName/search`
 
 **接口描述**: 通过用户名进行模糊查询，返回匹配的用户列表（包含用户ID和用户名）
 

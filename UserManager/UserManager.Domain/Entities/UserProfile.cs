@@ -85,6 +85,7 @@ namespace UserManager.Domain.Entities
             PhoneNumber = phoneNumber;
             Bio = bio;
             UpdatedAt = DateTime.UtcNow;
+            User.Name = realName;
         }
     }
 }

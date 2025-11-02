@@ -162,6 +162,46 @@ namespace UserManager.WebAPI.Controllers
         }
 
         /// <summary>
+        /// 通过用户ID获取用户完整信息
+        /// </summary>
+        [HttpGet("{userId}")]
+        [Authorize] // 需要JWT认证
+        public async Task<IActionResult> GetUserById(Guid userId)
+        {
+            var user = await repository.FindOneAsync(userId);
+            if (user == null)
+            {
+                return NotFound("用户不存在");
+            }
+
+            // 获取用户个人资料
+            var userProfile = await userProfileRepository.GetByUserIdAsync(userId);
+
+            var response = new Models.UserInfoResponse
+            {
+                UserId = user.Id,
+                UserName = user.Name,
+                UserBasic = new Models.UserBasicDto
+                {
+                    PhoneNumber = user.UserBasic.PhoneNumber,
+                    Email = user.UserBasic.Email
+                },
+                UserProfile = userProfile != null ? new Models.UserProfileDto
+                {
+                    Avatar = userProfile.Avatar,
+                    RealName = userProfile.RealName,
+                    Gender = userProfile.Gender,
+                    Birthday = userProfile.Birthday,
+                    Region = userProfile.Region,
+                    PhoneNumber = userProfile.PhoneNumber,
+                    Bio = userProfile.Bio
+                } : null
+            };
+
+            return Ok(response);
+        }
+
+        /// <summary>
         /// 通过邮箱验证码修改密码（无需认证）
         /// </summary>
         [HttpPut]

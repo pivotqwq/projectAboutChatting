@@ -20,7 +20,7 @@ namespace UserManager.Infrastracture.Configs
             
             // 配置字段长度和约束
             builder.Property(x => x.Avatar)
-                .HasMaxLength(500)
+                .HasColumnType("TEXT")
                 .IsUnicode(false);
                 
             builder.Property(x => x.RealName)
