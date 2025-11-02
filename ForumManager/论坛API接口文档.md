@@ -68,7 +68,61 @@ Authorization: Bearer {your_jwt_token}
 }
 ```
 
-### 2. 获取热门帖子
+### 2. 通过标题模糊查询帖子
+
+**接口**: `GET /api/posts/search/title`
+
+**描述**: 通过帖子标题进行模糊查询，返回符合条件的帖子
+
+**请求参数**:
+| 参数名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| titleKeyword | string | 是 | - | 标题关键词（用于模糊匹配） |
+| pageIndex | int | 否 | 0 | 页码，从0开始 |
+| pageSize | int | 否 | 20 | 每页数量，最大100 |
+| category | PostCategory | 否 | null | 帖子分类筛选 |
+
+**PostCategory 枚举值**:
+- `1` - 找学习搭子
+- `2` - 运动组队  
+- `3` - 技术讨论
+- `4` - 生活分享
+- `5` - 求职招聘
+- `99` - 其他
+
+**响应示例**:
+```json
+{
+  "data": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "title": "帖子标题",
+      "content": "帖子内容",
+      "titleImageBase64": null,
+      "category": 1,
+      "authorId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": null,
+      "viewCount": 100,
+      "likeCount": 20,
+      "commentCount": 15,
+      "favoriteCount": 8,
+      "tags": ["标签1", "标签2"]
+    }
+  ],
+  "pageIndex": 0,
+  "pageSize": 20,
+  "totalCount": 10,
+  "totalPages": 1,
+  "hasPreviousPage": false,
+  "hasNextPage": false
+}
+```
+
+**错误响应**:
+- 当 `titleKeyword` 为空时返回 `400 Bad Request`
+
+### 3. 获取热门帖子
 
 **接口**: `GET /api/posts/hot`
 
@@ -81,7 +135,7 @@ Authorization: Bearer {your_jwt_token}
 
 **响应**: 返回 `PostResponse[]` 数组
 
-### 3. 获取帖子详情
+### 4. 获取帖子详情
 
 **接口**: `GET /api/posts/{postId}`
 
@@ -120,7 +174,7 @@ Authorization: Bearer {your_jwt_token}
 }
 ```
 
-### 4. 创建帖子
+### 5. 创建帖子
 
 **接口**: `POST /api/posts`
 
@@ -146,7 +200,7 @@ Authorization: Bearer {your_jwt_token}
 
 **响应**: 返回创建的 `PostResponse`
 
-### 5. 编辑帖子
+### 6. 编辑帖子
 
 **接口**: `PUT /api/posts/{postId}`
 
@@ -167,7 +221,7 @@ Authorization: Bearer {your_jwt_token}
 
 **响应**: 返回更新后的 `PostResponse`
 
-### 6. 删除帖子
+### 7. 删除帖子
 
 **接口**: `DELETE /api/posts/{postId}`
 
@@ -178,7 +232,7 @@ Authorization: Bearer {your_jwt_token}
 
 **响应**: `204 No Content`
 
-### 7. 点赞/取消点赞帖子
+### 8. 点赞/取消点赞帖子
 
 **接口**: `POST /api/posts/{postId}/like`
 
@@ -189,7 +243,7 @@ Authorization: Bearer {your_jwt_token}
 
 **响应**: `200 OK`
 
-### 8. 收藏/取消收藏帖子
+### 9. 收藏/取消收藏帖子
 
 **接口**: `POST /api/posts/{postId}/favorite`
 
@@ -200,7 +254,7 @@ Authorization: Bearer {your_jwt_token}
 
 **响应**: `200 OK`
 
-### 9. 获取用户帖子列表
+### 10. 获取用户帖子列表
 
 **接口**: `GET /api/posts/user/{userId}`
 

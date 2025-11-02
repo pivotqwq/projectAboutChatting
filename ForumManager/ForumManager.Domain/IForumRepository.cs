@@ -10,6 +10,7 @@ namespace ForumManager.Domain
         // 帖子相关
         Task<Post?> GetPostByIdAsync(Guid postId);
         Task<List<Post>> GetPostsAsync(int pageIndex, int pageSize, ValueObjects.PostCategory? category = null, string? keyword = null);
+        Task<List<Post>> SearchPostsByTitleAsync(string titleKeyword, int pageIndex, int pageSize, ValueObjects.PostCategory? category = null);
         Task<List<Post>> GetHotPostsAsync(int count);
         Task<List<Post>> GetUserPostsAsync(Guid userId, int pageIndex, int pageSize);
         Task<Post> CreatePostAsync(Post post);
@@ -33,6 +34,7 @@ namespace ForumManager.Domain
 
         // 统计相关
         Task<int> GetPostCountAsync(ValueObjects.PostCategory? category = null);
+        Task<int> GetPostCountByTitleAsync(string titleKeyword, ValueObjects.PostCategory? category = null);
         Task<int> GetCommentCountAsync(Guid postId);
         Task<int> GetLikeCountAsync(Guid postId);
         Task<int> GetFavoriteCountAsync(Guid postId);

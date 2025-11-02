@@ -59,6 +59,24 @@ namespace ForumManager.Infrastructure
                 .ToListAsync();
         }
 
+        public async Task<List<Post>> SearchPostsByTitleAsync(string titleKeyword, int pageIndex, int pageSize, PostCategory? category = null)
+        {
+            var query = _context.Posts
+                .Where(p => p.Status == PostStatus.Published && p.Title.Contains(titleKeyword))
+                .AsQueryable();
+
+            if (category.HasValue)
+            {
+                query = query.Where(p => p.Category == category.Value);
+            }
+
+            return await query
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip(pageIndex * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
         public async Task<List<Post>> GetHotPostsAsync(int count)
         {
             // 不缓存完整实体以避免 EF Core 跟踪问题
@@ -294,6 +312,20 @@ namespace ForumManager.Infrastructure
         {
             var query = _context.Posts
                 .Where(p => p.Status == PostStatus.Published)
+                .AsQueryable();
+
+            if (category.HasValue)
+            {
+                query = query.Where(p => p.Category == category.Value);
+            }
+
+            return await query.CountAsync();
+        }
+
+        public async Task<int> GetPostCountByTitleAsync(string titleKeyword, PostCategory? category = null)
+        {
+            var query = _context.Posts
+                .Where(p => p.Status == PostStatus.Published && p.Title.Contains(titleKeyword))
                 .AsQueryable();
 
             if (category.HasValue)

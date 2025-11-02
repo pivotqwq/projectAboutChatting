@@ -67,6 +67,51 @@ namespace ForumManager.WebAPI.Controllers
         }
 
         /// <summary>
+        /// 通过标题模糊查询帖子
+        /// </summary>
+        [HttpGet("search/title")]
+        public async Task<ActionResult<PagedResponse<PostResponse>>> SearchPostsByTitle(
+            [FromQuery] string titleKeyword,
+            [FromQuery] int pageIndex = 0,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] PostCategory? category = null)
+        {
+            if (string.IsNullOrWhiteSpace(titleKeyword))
+                return BadRequest("标题关键词不能为空");
+
+            if (pageSize > 100) pageSize = 100;
+
+            var posts = await _forumRepository.SearchPostsByTitleAsync(titleKeyword, pageIndex, pageSize, category);
+            var totalCount = await _forumRepository.GetPostCountByTitleAsync(titleKeyword, category);
+
+            var postResponses = posts.Select(p => new PostResponse
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                TitleImageBase64 = p.TitleImageBase64,
+                Category = p.Category,
+                AuthorId = p.AuthorId,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                ViewCount = p.ViewCount,
+                LikeCount = p.LikeCount,
+                CommentCount = p.CommentCount,
+                FavoriteCount = p.FavoriteCount,
+                Tags = p.Tags
+            }).ToList();
+
+            return Ok(new PagedResponse<PostResponse>
+            {
+                Data = postResponses,
+                PageIndex = pageIndex,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+            });
+        }
+
+        /// <summary>
         /// 获取热门帖子
         /// </summary>
         [HttpGet("hot")]
