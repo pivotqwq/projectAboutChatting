@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
@@ -97,18 +98,25 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    // 提高连接稳定性与重连速度
+    options.EnableDetailedErrors = true;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(10);       // 服务端心跳更频繁
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);   // 客户端超时时间更宽松
+    options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+});
 builder.Services.AddHttpClient();
             
 // 添加CORS支持（允许前端访问SignalR）
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("Allow47", policy =>
     {
-        policy.SetIsOriginAllowed(_ => true)  // 允许所有来源
+        policy.WithOrigins("http://47.99.79.0")
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials();  // SignalR需要凭据支持
+              .AllowCredentials();  // SignalR需要凭据支持，必须指定具体源
     });
 });
 
@@ -126,6 +134,10 @@ builder.Services.AddSingleton<OnlineEventPublisher>();
 builder.Services.AddSingleton<PresenceService>();
 builder.Services.AddSingleton<GroupMemberCache>();
 
+// 语音相关服务
+builder.Services.AddSingleton<VoiceFileStorageService>();
+// builder.Services.AddSingleton<VoiceRecognitionService>();  // 暂时屏蔽语音识别功能
+
 // Minimal placeholder hub to wire mapping; concrete hub file added separately
 builder.Services.AddSingleton<IUserIdProvider, NameUserIdProvider>();
 
@@ -140,13 +152,21 @@ if (app.Environment.IsDevelopment())
 // app.UseHttpsRedirection(); // 只配置了HTTP端口
 
 // 启用CORS（必须在Authentication之前）
-app.UseCors("AllowAll");
+app.UseCors("Allow47");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+// 启用静态文件服务（用于访问语音文件）
+app.UseStaticFiles();
+
 app.MapControllers();
-app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<ChatHub>("/hubs/chat", options =>
+{
+    // 允许多种传输方式，并优化长轮询等待时长
+    options.Transports = HttpTransportType.WebSockets | HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling;
+    options.LongPolling.PollTimeout = TimeSpan.FromSeconds(30);
+});
 
 app.Run();
 

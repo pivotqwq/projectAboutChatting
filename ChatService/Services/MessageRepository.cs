@@ -29,6 +29,24 @@ namespace ChatService.Services
             return _messages.InsertOneAsync(doc);
         }
 
+        public async Task<BsonDocument?> GetByIdAsync(string id)
+        {
+            return await _messages.Find(Builders<BsonDocument>.Filter.Eq("Id", id)).FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> SoftDeleteAsync(string id, string deletedBy)
+        {
+            var filter = Builders<BsonDocument>.Filter.Eq("Id", id);
+            var update = Builders<BsonDocument>.Update
+                .Set("Deleted", true)
+                .Set("DeletedAt", DateTime.UtcNow)
+                .Set("DeletedBy", deletedBy)
+                .Set("Content", "");
+
+            var result = await _messages.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
+
         public async Task<IReadOnlyList<BsonDocument>> GetPrivateHistoryAsync(string userA, string userB, DateTime? beforeUtc, int pageSize)
         {
             var builder = Builders<BsonDocument>.Filter;

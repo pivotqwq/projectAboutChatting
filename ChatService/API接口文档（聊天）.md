@@ -163,6 +163,85 @@ Authorization: Bearer {token}
 
 ---
 
+## 语音消息 API
+
+### 上传语音文件
+
+```http
+POST /api/voice/upload
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+```
+
+**请求参数（Form Data）**:
+- `file` (File, 必需): 语音文件（支持 wav, mp3, m4a, ogg, webm 格式）
+- `recognize` (boolean, 可选): 是否自动进行语音识别，默认 false
+- `language` (string, 可选): 识别语言代码，默认 "zh-CN"
+
+**响应示例**:
+```json
+{
+  "filePath": "voices/20241106120000_abc123def456.webm",
+  "fileUrl": "http://localhost:9293/voices/20241106120000_abc123def456.webm",
+  "fileName": "recording.webm",
+  "fileSize": 123456,
+  "uploadedAt": "2024-11-06T12:00:00Z",
+  "recognizedText": "识别出的文字内容",
+  "recognitionStatus": "success"
+}
+```
+
+**说明**:
+- 文件大小限制：10MB
+- 支持的格式：`.wav`, `.mp3`, `.m4a`, `.ogg`, `.webm`
+- 如果 `recognize=true`，服务器会自动进行语音识别
+
+---
+
+### 语音识别
+
+```http
+POST /api/voice/recognize
+Authorization: Bearer {token}
+Content-Type: application/x-www-form-urlencoded
+```
+
+**请求参数（Form Data）**:
+- `filePath` (string, 必需): 语音文件的相对路径
+- `language` (string, 可选): 识别语言代码，默认 "zh-CN"
+
+**响应示例**:
+```json
+{
+  "filePath": "voices/20241106120000_abc123def456.webm",
+  "recognizedText": "识别出的文字内容",
+  "recognitionStatus": "success",
+  "language": "zh-CN"
+}
+```
+
+---
+
+### 删除语音文件
+
+```http
+DELETE /api/voice/{filePath}
+Authorization: Bearer {token}
+```
+
+**路径参数**:
+- `filePath` (必需): 语音文件的相对路径（需要 URL 编码）
+
+**响应示例**:
+```json
+{
+  "message": "文件已删除",
+  "filePath": "voices/20241106120000_abc123def456.webm"
+}
+```
+
+---
+
 ## 频道管理 API
 
 ### 获取随机分配的频道
@@ -355,6 +434,61 @@ await connection.invoke("SendChannelMessage", channelId, content);
 
 ---
 
+#### 8. 发送私聊语音消息
+
+```javascript
+await connection.invoke("SendPrivateVoiceMessage", toUserId, voiceFilePath, voiceFileUrl, duration, recognizedText);
+```
+
+**参数**:
+- `toUserId` (string): 接收者用户ID
+- `voiceFilePath` (string): 语音文件路径（从上传接口获取）
+- `voiceFileUrl` (string, 可选): 语音文件访问URL
+- `duration` (number, 可选): 语音时长（秒）
+- `recognizedText` (string, 可选): 语音识别的文字
+
+**说明**:
+- 需要先调用 `/api/voice/upload` 上传语音文件
+- 语音识别可通过上传接口自动完成，或单独调用 `/api/voice/recognize`
+
+---
+
+#### 9. 发送群聊语音消息
+
+```javascript
+await connection.invoke("SendGroupVoiceMessage", groupId, voiceFilePath, voiceFileUrl, duration, recognizedText);
+```
+
+**参数**:
+- `groupId` (string): 群组ID
+- `voiceFilePath` (string): 语音文件路径
+- `voiceFileUrl` (string, 可选): 语音文件访问URL
+- `duration` (number, 可选): 语音时长（秒）
+- `recognizedText` (string, 可选): 语音识别的文字
+
+**服务端触发的事件**:
+- 群组所有成员会收到 `ReceiveGroupMessage` 事件（MessageType 为 "voice"）
+
+---
+
+#### 10. 发送频道语音消息（公屏聊天）
+
+```javascript
+await connection.invoke("SendChannelVoiceMessage", channelId, voiceFilePath, voiceFileUrl, duration, recognizedText);
+```
+
+**参数**:
+- `channelId` (string): 频道ID
+- `voiceFilePath` (string): 语音文件路径
+- `voiceFileUrl` (string, 可选): 语音文件访问URL
+- `duration` (number, 可选): 语音时长（秒）
+- `recognizedText` (string, 可选): 语音识别的文字
+
+**服务端触发的事件**:
+- 频道所有成员会收到 `ReceiveChannelMessage` 事件（MessageType 为 "voice"）
+
+---
+
 ### 服务端推送的事件
 
 #### 接收私聊消息
@@ -420,9 +554,23 @@ connection.on("ReceiveChannelMessage", (message) => {
   //   ToUserId: null,
   //   GroupId: "channel-001",
   //   Content: "大家好！",
-  //   CreatedAt: "2024-01-15T10:30:00Z"
+  //   CreatedAt: "2024-01-15T10:30:00Z",
+  //   MessageType: "text"  // 文本消息为 "text"，语音消息为 "voice"
   // }
 });
+```
+
+**语音消息格式**:
+当 `MessageType === "voice"` 时，消息还包含以下字段：
+```javascript
+{
+  // ... 基本字段同上
+  MessageType: "voice",
+  VoiceFilePath: "voices/20241106120000_abc123def456.webm",
+  VoiceFileUrl: "http://localhost:9293/voices/20241106120000_abc123def456.webm",
+  VoiceDuration: 10,  // 语音时长（秒）
+  RecognizedText: "识别出的文字内容"  // 如果有语音识别
+}
 ```
 
 ---
@@ -504,8 +652,13 @@ interface ChatMessage {
   FromUserId: string;            // 发送者用户ID
   ToUserId: string | null;       // 接收者用户ID（私聊时使用）
   GroupId: string | null;        // 群组ID（群聊时使用）或频道ID（频道消息时使用）
-  Content: string;               // 消息内容
+  Content: string;               // 消息内容（文本消息为文本内容，语音消息为识别文字）
   CreatedAt: string;             // 创建时间（ISO 8601 UTC）
+  MessageType?: 'text' | 'voice'; // 消息类型：文本或语音（可选，默认为 "text"）
+  VoiceFilePath?: string;         // 语音文件路径（语音消息时使用）
+  VoiceFileUrl?: string;          // 语音文件访问URL（语音消息时使用）
+  VoiceDuration?: number;         // 语音时长（秒，语音消息时使用）
+  RecognizedText?: string;        // 语音识别的文字（语音消息时使用）
 }
 ```
 
@@ -537,6 +690,15 @@ ChatService 的 JWT 配置必须与 UserManager 保持一致：
 ---
 
 ## 更新日志
+
+### v1.4.0 (2024-11-06)
+- 新增语音消息功能
+- 新增语音文件上传接口：`POST /api/voice/upload`
+- 新增语音识别接口：`POST /api/voice/recognize`
+- 新增语音文件删除接口：`DELETE /api/voice/{filePath}`
+- SignalR 新增语音消息方法：`SendPrivateVoiceMessage`、`SendGroupVoiceMessage`、`SendChannelVoiceMessage`
+- 消息模型扩展支持语音消息类型
+- 集成 Azure Speech Service 进行语音识别
 
 ### v1.3.0 (2025-10-31)
 - 新增公屏随机频道聊天功能
@@ -586,3 +748,38 @@ ChatService 会调用 UserManager 校验群成员身份，请在 ChatService 的
 ```
 
 说明：未配置时默认使用 `http://localhost:9291`。
+
+---
+
+## 语音功能配置说明
+
+### 语音存储配置
+
+```json
+{
+  "VoiceStorage": {
+    "Path": ""  // 语音文件存储路径，为空则使用默认路径 wwwroot/voices
+  }
+}
+```
+
+### 语音识别配置
+
+**Azure Speech Service 配置**:
+```json
+{
+  "VoiceRecognition": {
+    "Azure": {
+      "SubscriptionKey": "your-azure-subscription-key",
+      "Region": "eastasia"
+    }
+  }
+}
+```
+
+**说明**:
+- `SubscriptionKey`: Azure Speech Service 的订阅密钥（必需）
+- `Region`: Azure 服务区域，默认为 "eastasia"
+- 需要在 [Azure Portal](https://portal.azure.com) 创建 Speech Service 资源并获取密钥
+
+**前端实现方案**: 请参考 `前端语音功能实现方案.md` 文档。

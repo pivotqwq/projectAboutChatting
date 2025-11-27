@@ -16,11 +16,13 @@ namespace ChatService.Controllers
     {
         private readonly MessageRepository _repo;
         private readonly ILogger<MessagesController> _logger;
+        private readonly IConfiguration _configuration;
 
-        public MessagesController(MessageRepository repo, ILogger<MessagesController> logger)
+        public MessagesController(MessageRepository repo, ILogger<MessagesController> logger, IConfiguration configuration)
         {
             _repo = repo;
             _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -210,6 +212,64 @@ namespace ChatService.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "获取频道历史失败，频道ID: {ChannelId}", channelId);
+                return StatusCode(500, new { error = "服务器内部错误" });
+            }
+        }
+
+        /// <summary>
+        /// 撤回/删除我发送的消息（服务器侧校验时间窗）
+        /// </summary>
+        /// <param name="messageId">消息ID（后端生成的Id）</param>
+        /// <returns>撤回结果</returns>
+        [HttpPost("{messageId}/recall")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> RecallMessage([FromRoute] string messageId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(messageId))
+                {
+                    return BadRequest(new { error = "messageId 不能为空" });
+                }
+
+                var currentUserId = GetCurrentUserId();
+                if (string.IsNullOrWhiteSpace(currentUserId))
+                {
+                    return Unauthorized(new { error = "无效的认证信息" });
+                }
+
+                var doc = await _repo.GetByIdAsync(messageId);
+                if (doc == null)
+                {
+                    return NotFound(new { error = "消息不存在" });
+                }
+
+                var fromUserId = doc.GetValue("FromUserId", defaultValue: MongoDB.Bson.BsonNull.Value)?.ToString();
+                if (!string.Equals(fromUserId, currentUserId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Forbid();
+                }
+
+                var createdAt = doc.GetValue("CreatedAt", MongoDB.Bson.BsonNull.Value).ToUniversalTime();
+                var windowSeconds = int.TryParse(_configuration["Chat:RecallWindowSeconds"], out var s) ? s : 120;
+                if (DateTime.UtcNow - createdAt > TimeSpan.FromSeconds(windowSeconds))
+                {
+                    return BadRequest(new { error = "超过可撤回时间窗口" });
+                }
+
+                var ok = await _repo.SoftDeleteAsync(messageId, currentUserId);
+                if (!ok)
+                {
+                    return StatusCode(500, new { error = "撤回失败" });
+                }
+
+                return Ok(new { message = "已撤回", messageId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "撤回消息失败，消息ID: {MessageId}", messageId);
                 return StatusCode(500, new { error = "服务器内部错误" });
             }
         }
