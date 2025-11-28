@@ -4,6 +4,7 @@ using System.Security.Claims;
 using ForumManager.Domain;
 using ForumManager.WebAPI.Models.Requests;
 using ForumManager.WebAPI.Models.Responses;
+using Microsoft.Extensions.Logging;
 
 namespace ForumManager.WebAPI.Controllers
 {
@@ -16,11 +17,16 @@ namespace ForumManager.WebAPI.Controllers
     {
         private readonly ForumDomainService _forumDomainService;
         private readonly IForumRepository _forumRepository;
+        private readonly ILogger<CommentsController> _logger;
 
-        public CommentsController(ForumDomainService forumDomainService, IForumRepository forumRepository)
+        public CommentsController(
+            ForumDomainService forumDomainService,
+            IForumRepository forumRepository,
+            ILogger<CommentsController> logger)
         {
             _forumDomainService = forumDomainService;
             _forumRepository = forumRepository;
+            _logger = logger;
         }
 
         /// <summary>
@@ -141,21 +147,23 @@ namespace ForumManager.WebAPI.Controllers
         public async Task<IActionResult> ToggleLike(Guid commentId)
         {
             var userId = GetCurrentUserId();
-            var comment = await _forumRepository.GetCommentByIdAsync(commentId);
-            if (comment == null)
+            try
+            {
+                await _forumDomainService.ToggleCommentLikeAsync(commentId, userId);
+            }
+            catch (ArgumentException)
+            {
                 return NotFound("评论不存在");
-
-            var isLiked = await _forumRepository.IsCommentLikedByUserAsync(commentId, userId);
-            if (isLiked)
-            {
-                comment.UnlikeComment(userId);
             }
-            else
+            catch (InvalidOperationException ex)
             {
-                comment.LikeComment(userId);
+                return BadRequest(new { error = ex.Message });
             }
-
-            await _forumRepository.UpdateCommentAsync(comment);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Toggle comment like failed for comment {CommentId}", commentId);
+                return StatusCode(500, new { error = "服务器内部错误" });
+            }
             return Ok();
         }
 

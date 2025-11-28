@@ -281,6 +281,18 @@ namespace ForumManager.WebAPI.Controllers
         }
 
         /// <summary>
+        /// 获取“我的收藏”帖子ID列表
+        /// </summary>
+        [HttpGet("favorites/my")]
+        [Authorize]
+        public async Task<ActionResult<List<Guid>>> GetMyFavoritePostIds()
+        {
+            var userId = GetCurrentUserId();
+            var ids = await _forumRepository.GetFavoritePostIdsByUserAsync(userId);
+            return Ok(ids);
+        }
+
+        /// <summary>
         /// 获取用户帖子列表
         /// </summary>
         [HttpGet("user/{userId}")]

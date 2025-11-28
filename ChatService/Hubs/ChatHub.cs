@@ -23,6 +23,7 @@ namespace ChatService.Hubs
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly GroupMemberCache _groupMemberCache;
+        private readonly AiChatBotService _chatBotService;
 
         public ChatHub(
             IMongoDatabase database, 
@@ -32,7 +33,8 @@ namespace ChatService.Hubs
             ILogger<ChatHub> logger,
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
-            GroupMemberCache groupMemberCache)
+            GroupMemberCache groupMemberCache,
+            AiChatBotService chatBotService)
         {
             _database = database;
             _messageRepository = messageRepository;
@@ -42,6 +44,7 @@ namespace ChatService.Hubs
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _groupMemberCache = groupMemberCache;
+            _chatBotService = chatBotService;
         }
 
         /// <summary>
@@ -131,6 +134,12 @@ namespace ChatService.Hubs
 
                 _logger.LogInformation("私聊消息已发送: {FromUserId} -> {ToUserId}, MsgId: {MessageId}", 
                     fromUserId, toUserId, msg.Id);
+
+                // 如果发送给聊天机器人，触发AI回复
+                if (_chatBotService.IsChatBot(toUserId))
+                {
+                    _ = Task.Run(async () => await ProcessChatBotMessageAsync(fromUserId, toUserId, content, msg.Id));
+                }
             }
             catch (HubException)
             {
@@ -535,6 +544,71 @@ namespace ChatService.Hubs
                    ?? Context.UserIdentifier 
                    ?? Context.User?.Identity?.Name 
                    ?? string.Empty;
+        }
+
+        /// <summary>
+        /// 处理发送给聊天机器人的消息，获取AI回复并发送
+        /// </summary>
+        private async Task ProcessChatBotMessageAsync(string fromUserId, string toUserId, string userMessage, string messageId)
+        {
+            try
+            {
+                _logger.LogInformation("开始处理聊天机器人消息: FromUserId={FromUserId}, MessageId={MessageId}", 
+                    fromUserId, messageId);
+
+                // 获取最近的对话历史（可选，用于上下文）
+                var conversationHistory = await GetRecentConversationHistoryAsync(fromUserId, toUserId, maxMessages: 10);
+
+                // 调用AI服务获取回复（传入用户ID用于token限制）
+                var botResponse = await _chatBotService.GetBotResponseAsync(fromUserId, userMessage, conversationHistory);
+
+                if (!string.IsNullOrWhiteSpace(botResponse))
+                {
+                    // 创建机器人回复消息
+                    var botMsg = ChatMessage.CreatePrivate(toUserId, fromUserId, botResponse);
+                    await _messageRepository.InsertAsync(botMsg.ToBsonDocument());
+
+                    // 发送回复给用户
+                    await Clients.User(fromUserId).SendAsync("ReceivePrivateMessage", botMsg);
+
+                    _logger.LogInformation("聊天机器人回复已发送: BotUserId={BotUserId} -> UserId={UserId}, MsgId={MessageId}", 
+                        toUserId, fromUserId, botMsg.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "处理聊天机器人消息失败: FromUserId={FromUserId}, MessageId={MessageId}", 
+                    fromUserId, messageId);
+            }
+        }
+
+        /// <summary>
+        /// 获取最近的对话历史（用于AI上下文）
+        /// </summary>
+        private async Task<List<Services.ConversationMessage>> GetRecentConversationHistoryAsync(string userA, string userB, int maxMessages = 10)
+        {
+            try
+            {
+                var messages = await _messageRepository.GetPrivateHistoryAsync(userA, userB, null, maxMessages);
+                return messages.Select(doc =>
+                {
+                    var fromUserId = doc.GetValue("FromUserId", defaultValue: MongoDB.Bson.BsonNull.Value)?.ToString() ?? string.Empty;
+                    var content = doc.GetValue("Content", defaultValue: MongoDB.Bson.BsonNull.Value)?.ToString() ?? string.Empty;
+                    var createdAt = doc.GetValue("CreatedAt", defaultValue: MongoDB.Bson.BsonNull.Value).ToUniversalTime();
+
+                    return new Services.ConversationMessage
+                    {
+                        FromUserId = fromUserId,
+                        Content = content,
+                        CreatedAt = createdAt
+                    };
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "获取对话历史失败，将使用空历史");
+                return new List<Services.ConversationMessage>();
+            }
         }
 
         private async Task<bool> IsUserGroupMemberAsync(string groupId, string userId)

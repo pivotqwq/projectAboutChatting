@@ -171,7 +171,7 @@ namespace UserManager.WebAPI.Controllers
             var user = await repository.FindOneAsync(userId);
             if (user == null)
             {
-                return NotFound("用户不存在");
+                return Ok(new { code =404,message = "用户不存在"});
             }
 
             // 获取用户个人资料

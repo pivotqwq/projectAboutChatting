@@ -198,7 +198,52 @@ Content-Type: multipart/form-data
 
 ---
 
-### 语音识别
+### 获取语音文件信息
+
+```http
+GET /api/voice/info?filePath=voices/20241106120000_abc123def456.webm
+Authorization: Bearer {token}
+```
+
+**查询参数**:
+- `filePath` (string, 必需): 语音文件的相对路径
+
+**响应示例**:
+```json
+{
+  "filePath": "voices/20241106120000_abc123def456.webm",
+  "fileUrl": "http://localhost:9293/voices/20241106120000_abc123def456.webm",
+  "fileName": "20241106120000_abc123def456.webm",
+  "fileSize": 123456,
+  "extension": ".webm",
+  "createdTime": "2024-11-06T12:00:00Z",
+  "lastModified": "2024-11-06T12:00:00Z"
+}
+```
+
+---
+
+### 下载/播放语音文件
+
+```http
+GET /api/voice/download?filePath=voices/20241106120000_abc123def456.webm
+Authorization: Bearer {token}
+```
+
+**查询参数**:
+- `filePath` (string, 必需): 语音文件的相对路径
+
+**响应**:
+- 返回语音文件的二进制流
+- Content-Type 根据文件格式自动设置（audio/webm, audio/ogg 等）
+
+**说明**:
+- 可以直接在 HTML `<audio>` 标签中使用返回的 URL 播放语音
+- 也可以直接访问静态文件：`http://localhost:9293/voices/{文件名}`（如果配置了静态文件服务）
+
+---
+
+### 语音识别（已暂时屏蔽）
 
 ```http
 POST /api/voice/recognize
@@ -735,6 +780,68 @@ ChatService 的 JWT 配置必须与 UserManager 保持一致：
 
 ---
 
+## 聊天机器人 API
+
+### 获取聊天机器人信息
+
+```http
+GET /api/chatbot/info
+Authorization: Bearer {token}
+```
+
+**描述**: 获取聊天机器人的用户ID和配置信息
+
+**响应示例**:
+```json
+{
+  "botUserId": "ai-chatbot",
+  "name": "AI助手",
+  "description": "智能聊天机器人，基于阿里云百炼千问模型",
+  "enabled": true,
+  "supportsVoice": false,
+  "supportsImage": false
+}
+```
+
+**说明**:
+- `botUserId`: 聊天机器人的用户ID，前端需要将此ID添加到用户的好友列表中
+- `supportsVoice`: 机器人是否支持语音消息（当前为 false，只支持文本）
+- `supportsImage`: 机器人是否支持图片消息（当前为 false）
+
+---
+
+### 获取AI对话token使用情况
+
+```http
+GET /api/chatbot/usage
+Authorization: Bearer {token}
+```
+
+**描述**: 获取当前用户今日的AI对话token使用情况和剩余额度
+
+**响应示例**:
+```json
+{
+  "used": 1250,
+  "limit": 3000,
+  "remaining": 1750,
+  "resetTime": "2024-11-07T00:00:00Z"
+}
+```
+
+**说明**:
+- `used`: 今日已使用的token数量
+- `limit`: 每日token限制（3000）
+- `remaining`: 剩余可用token数量
+- `resetTime`: 重置时间（UTC时间，每日0点重置）
+
+**使用限制**:
+- 每个用户每天限制使用3000 token
+- 超过限制后，机器人将回复："抱歉，您今日的AI对话次数已达上限（3000 token/天），请明天再试。"
+- 使用量在每日0点（UTC时间）自动重置
+
+---
+
 ## 配置说明（服务间调用）
 
 ChatService 会调用 UserManager 校验群成员身份，请在 ChatService 的配置中设置：
@@ -783,3 +890,41 @@ ChatService 会调用 UserManager 校验群成员身份，请在 ChatService 的
 - 需要在 [Azure Portal](https://portal.azure.com) 创建 Speech Service 资源并获取密钥
 
 **前端实现方案**: 请参考 `前端语音功能实现方案.md` 文档。
+
+---
+
+## AI聊天机器人配置说明
+
+### 阿里云百炼千问配置
+
+```json
+{
+  "AiChatBot": {
+    "BotUserId": "ai-chatbot",
+    "Aliyun": {
+      "ApiKey": "your-aliyun-api-key",
+      "Model": "qwen-turbo"
+    },
+    "SystemPrompt": "你是一个友好的AI助手，请用简洁、友好的方式回答用户的问题。",
+    "Temperature": "0.7",
+    "MaxTokens": "2000",
+    "TopP": "0.8"
+  }
+}
+```
+
+**配置说明**:
+- `BotUserId`: 聊天机器人的用户ID（默认为 "ai-chatbot"），需要在 UserManager 中创建对应的用户
+- `Aliyun.ApiKey`: 阿里云百炼千问的 API Key（必需）
+- `Aliyun.Model`: 使用的模型名称（默认 "qwen-turbo"，可选 "qwen-plus", "qwen-max" 等）
+- `SystemPrompt`: 系统提示词，用于设定AI的角色和风格
+- `Temperature`: 温度参数（0-1），控制回复的随机性，默认 0.7
+- `MaxTokens`: 最大回复长度，默认 2000
+- `TopP`: 核采样参数，默认 0.8
+
+**获取 API Key**:
+1. 访问 [阿里云百炼控制台](https://dashscope.console.aliyun.com/)
+2. 创建API Key
+3. 将API Key配置到 `appsettings.json` 中
+
+**前端实现方案**: 请参考 `前端AI聊天机器人实现方案.md` 文档。

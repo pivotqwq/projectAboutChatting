@@ -108,6 +108,17 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// CORS for http://47.99.79.0
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Allow47", policy =>
+    {
+        policy.WithOrigins("http://47.99.79.0")
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -118,6 +129,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("Allow47");
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -359,5 +359,18 @@ namespace ForumManager.Infrastructure
 
 
         #endregion
+
+        #region 收藏相关
+
+        public async Task<List<Guid>> GetFavoritePostIdsByUserAsync(Guid userId)
+        {
+            return await _context.PostFavorites
+                .Where(pf => pf.UserId == userId)
+                .OrderByDescending(pf => pf.CreatedAt)
+                .Select(pf => pf.PostId)
+                .ToListAsync();
+        }
+
+        #endregion
     }
 }

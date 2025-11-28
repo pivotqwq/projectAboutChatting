@@ -117,6 +117,108 @@ namespace ChatService.Controllers
             }
         }
 
+        /// <summary>
+        /// 获取语音文件信息
+        /// </summary>
+        /// <param name="filePath">语音文件的相对路径</param>
+        /// <returns>语音文件信息</returns>
+        /// <response code="200">获取成功</response>
+        /// <response code="404">文件不存在</response>
+        [HttpGet("info")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult GetVoiceFileInfo([FromQuery] string filePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(filePath))
+                {
+                    return BadRequest(new { error = "文件路径不能为空" });
+                }
+
+                if (!_fileStorage.FileExists(filePath))
+                {
+                    return NotFound(new { error = "语音文件不存在" });
+                }
+
+                var fullPath = _fileStorage.GetFilePath(filePath);
+                var fileInfo = new FileInfo(fullPath);
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var fileUrl = _fileStorage.GetFileUrl(filePath, baseUrl);
+
+                return Ok(new
+                {
+                    filePath = filePath,
+                    fileUrl = fileUrl,
+                    fileName = Path.GetFileName(filePath),
+                    fileSize = fileInfo.Length,
+                    extension = fileInfo.Extension,
+                    createdTime = fileInfo.CreationTimeUtc,
+                    lastModified = fileInfo.LastWriteTimeUtc
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取语音文件信息失败: {FilePath}", filePath);
+                return StatusCode(500, new { error = "服务器内部错误" });
+            }
+        }
+
+        /// <summary>
+        /// 下载/播放语音文件
+        /// </summary>
+        /// <param name="filePath">语音文件的相对路径</param>
+        /// <returns>语音文件流</returns>
+        /// <response code="200">文件内容</response>
+        /// <response code="404">文件不存在</response>
+        [HttpGet("download")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public IActionResult DownloadVoiceFile([FromQuery] string filePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(filePath))
+                {
+                    return BadRequest(new { error = "文件路径不能为空" });
+                }
+
+                if (!_fileStorage.FileExists(filePath))
+                {
+                    return NotFound(new { error = "语音文件不存在" });
+                }
+
+                var fullPath = _fileStorage.GetFilePath(filePath);
+                var fileBytes = System.IO.File.ReadAllBytes(fullPath);
+                var contentType = GetContentType(fullPath);
+                var fileName = Path.GetFileName(filePath);
+
+                return File(fileBytes, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "下载语音文件失败: {FilePath}", filePath);
+                return StatusCode(500, new { error = "服务器内部错误" });
+            }
+        }
+
+        /// <summary>
+        /// 根据文件路径获取Content-Type
+        /// </summary>
+        private string GetContentType(string filePath)
+        {
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            return extension switch
+            {
+                ".wav" => "audio/wav",
+                ".mp3" => "audio/mpeg",
+                ".m4a" => "audio/mp4",
+                ".ogg" => "audio/ogg",
+                ".webm" => "audio/webm",
+                _ => "application/octet-stream"
+            };
+        }
+
         // 暂时屏蔽语音识别功能
         /*
         /// <summary>

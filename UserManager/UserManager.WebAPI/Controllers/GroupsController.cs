@@ -70,7 +70,7 @@ namespace UserManager.WebAPI.Controllers
         public IActionResult GetMembers(Guid groupId)
         {
             var members = _db.GroupMembers.Where(m => m.GroupId == groupId)
-                .Select(m => new { m.UserId, m.Role, m.JoinedAt })
+                .Select(m => new { m.UserId, m.Role, m.Nickname, m.JoinedAt })
                 .ToList();
             return Ok(members);
         }
@@ -253,6 +253,57 @@ namespace UserManager.WebAPI.Controllers
             _db.GroupMembers.RemoveRange(list);
             await _db.SaveChangesAsync();
             return NoContent();
+        }
+
+        /// <summary>
+        /// 退出群聊（成员自助）
+        /// </summary>
+        [HttpDelete("{groupId}/leave")]
+        public async Task<IActionResult> LeaveGroup(Guid groupId)
+        {
+            var me = GetCurrentUserId();
+            var membership = await _db.GroupMembers.FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == me);
+            if (membership == null)
+            {
+                return NotFound(new { error = "您不是该群成员" });
+            }
+
+            if (string.Equals(membership.Role, "owner", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { error = "群主无法直接退出，请先移交群主或解散群" });
+            }
+
+            _db.GroupMembers.Remove(membership);
+            await _db.SaveChangesAsync();
+            return Ok(new { message = "已退出群聊" });
+        }
+
+        /// <summary>
+        /// 修改我在该群内的昵称（仅群内成员）
+        /// </summary>
+        [HttpPut("{groupId}/nickname")]
+        public async Task<IActionResult> UpdateMyGroupNickname(Guid groupId, [FromBody] UpdateNicknameRequest req)
+        {
+            if (req == null || string.IsNullOrWhiteSpace(req.Nickname))
+            {
+                return BadRequest(new { error = "昵称不能为空" });
+            }
+
+            var me = GetCurrentUserId();
+            var member = await _db.GroupMembers.FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == me);
+            if (member == null)
+            {
+                return Forbid();
+            }
+
+            member.Nickname = req.Nickname.Trim();
+            await _db.SaveChangesAsync();
+            return Ok(new { message = "昵称已更新" });
+        }
+
+        public class UpdateNicknameRequest
+        {
+            public string Nickname { get; set; } = string.Empty;
         }
 
         /// <summary>

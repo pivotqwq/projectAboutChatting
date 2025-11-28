@@ -8,6 +8,7 @@ namespace UserManager.Domain.Entities
         public Guid GroupId { get; set; }
         public Guid UserId { get; set; }
         public string Role { get; set; } = "member"; // owner/admin/member
+        public string? Nickname { get; set; } // 群内昵称（可为空，默认使用全局用户名）
         public DateTime JoinedAt { get; set; }
 
         private GroupMember() { }

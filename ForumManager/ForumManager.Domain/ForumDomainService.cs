@@ -180,5 +180,20 @@ namespace ForumManager.Domain
             // 直接在 Repository 层操作，不通过领域实体的私有集合
             await _forumRepository.TogglePostFavoriteAsync(postId, userId);
         }
+
+        /// <summary>
+        /// 点赞/取消点赞评论
+        /// </summary>
+        public async Task ToggleCommentLikeAsync(Guid commentId, Guid userId)
+        {
+            var comment = await _forumRepository.GetCommentByIdAsync(commentId);
+            if (comment == null)
+                throw new ArgumentException("评论不存在");
+
+            if (comment.IsDeleted)
+                throw new InvalidOperationException("该评论已被删除");
+
+            await _forumRepository.ToggleCommentLikeAsync(commentId, userId);
+        }
     }
 }

@@ -32,6 +32,9 @@ namespace ForumManager.Domain
         Task TogglePostFavoriteAsync(Guid postId, Guid userId);
         Task ToggleCommentLikeAsync(Guid commentId, Guid userId);
 
+        // 收藏相关
+        Task<List<Guid>> GetFavoritePostIdsByUserAsync(Guid userId);
+
         // 统计相关
         Task<int> GetPostCountAsync(ValueObjects.PostCategory? category = null);
         Task<int> GetPostCountByTitleAsync(string titleKeyword, ValueObjects.PostCategory? category = null);

@@ -138,6 +138,9 @@ builder.Services.AddSingleton<GroupMemberCache>();
 builder.Services.AddSingleton<VoiceFileStorageService>();
 // builder.Services.AddSingleton<VoiceRecognitionService>();  // 暂时屏蔽语音识别功能
 
+// AI聊天机器人服务
+builder.Services.AddSingleton<AiChatBotService>();
+
 // Minimal placeholder hub to wire mapping; concrete hub file added separately
 builder.Services.AddSingleton<IUserIdProvider, NameUserIdProvider>();
 

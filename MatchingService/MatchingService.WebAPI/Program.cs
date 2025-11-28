@@ -134,9 +134,9 @@ builder.Services.AddAuthorization();
 // 配置CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("Allow47", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://47.99.79.0")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -153,7 +153,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAll");
+app.UseCors("Allow47");
 
 // 添加错误处理中间件
 app.UseMiddleware<ErrorHandlingMiddleware>();

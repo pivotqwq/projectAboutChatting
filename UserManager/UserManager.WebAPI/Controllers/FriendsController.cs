@@ -176,12 +176,19 @@ namespace UserManager.WebAPI.Controllers
         public async Task<IActionResult> RemoveFriend(Guid friendUserId)
         {
             var me = GetCurrentUserId();
-            var list = _db.Friendships.Where(f =>
+            var relations = _db.Friendships.Where(f =>
                 (f.UserId == me && f.FriendUserId == friendUserId) ||
-                (f.UserId == friendUserId && f.FriendUserId == me));
-            _db.Friendships.RemoveRange(list);
+                (f.UserId == friendUserId && f.FriendUserId == me))
+                .ToList();
+
+            if (relations.Count == 0)
+            {
+                return NotFound(new { error = "好友关系不存在" });
+            }
+
+            _db.Friendships.RemoveRange(relations);
             await _db.SaveChangesAsync();
-            return NoContent();
+            return Ok(new { message = "好友已删除" });
         }
     }
 }
